@@ -1,0 +1,62 @@
+{% extends "predictions/base.html" %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="px-4 animate-fadeIn">
+    <div class="mb-6">
+        <h2 class="text-[#00E676] text-4xl font-black tracking-tighter uppercase flex items-center gap-3">
+            Projeção Final 2026
+        </h2>
+    </div>
+
+    <div class="overflow-x-auto bg-[#1E1E1E] rounded-2xl border border-[#333333] shadow-2xl">
+        <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead>
+                <tr class="bg-[#121212] text-white text-[10px] uppercase tracking-widest border-b border-[#333333]">
+                    <th class="p-4 w-12 text-center">Pos</th>
+                    <th class="p-4">Time</th>
+                    <th class="p-4 text-center">PTS</th>
+                    <th class="p-4 text-center">V</th>
+                    <th class="p-4 text-center">E</th>
+                    <th class="p-4 text-center">D</th>
+                    <th class="p-4 text-center">GM</th>
+                    <th class="p-4 text-center">GS</th>
+                    <th class="p-4 text-center">SG</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#333333]">
+                {% for row in tabela %}
+                <tr class="hover:bg-white/5 transition-colors group">
+                    <td class="p-4 text-center font-black text-xs 
+                        {% if forloop.counter <= 4 %} border-l-4 border-blue-600 text-blue-500
+                        {% elif forloop.counter <= 6 %} border-l-4 border-cyan-500 text-cyan-400
+                        {% elif forloop.counter >= 17 %} border-l-4 border-red-600 text-red-500
+                        {% else %} border-l-4 border-transparent text-gray-500 {% endif %}">
+                        {{ forloop.counter }}º
+                    </td>
+
+                    <td class="p-4 flex items-center gap-3">
+                        <img src="{{ ESCUDOS|dict_get:row.Time }}" 
+                             class="w-6 h-6 object-contain" 
+                             onerror="this.src='https://via.placeholder.com/30?text=?️'">
+                        <span class="font-bold text-white group-hover:text-white/80 transition-colors">
+                            {{ row.Time }}
+                        </span>
+                    </td>
+                    
+                    <td class="p-4 text-center font-black text-white text-lg">{{ row.P }}</td>
+                    <td class="p-4 text-center text-white">{{ row.V }}</td>
+                    <td class="p-4 text-center text-white/70">{{ row.E }}</td>
+                    <td class="p-4 text-center text-white/70">{{ row.D }}</td>
+                    <td class="p-4 text-center text-white/70 font-mono">{{ row.GM }}</td>
+                    <td class="p-4 text-center text-white/70 font-mono">{{ row.GS }}</td>
+                    <td class="p-4 text-center font-bold {% if row.SG > 0 %}text-blue-400{% elif row.SG < 0 %}text-red-400{% else %}text-gray-500{% endif %}">
+                        {{ row.SG }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

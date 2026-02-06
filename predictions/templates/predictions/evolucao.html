@@ -1,0 +1,49 @@
+{% extends "predictions/base.html" %}
+
+{% block content %}
+<div class="px-4">
+    <div class="mb-6">
+        <h2 class="text-[#00E676] text-xl font-bold flex items-center gap-2">
+            <span>📈</span> Evolução no Campeonato
+        </h2>
+        <p class="text-xs text-gray-500 mt-1">Histórico de posições rodada a rodada.</p>
+    </div>
+
+    <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333333] h-[500px]">
+        <canvas id="evolutionChart"></canvas>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Aqui no futuro passaremos os dados do views.py para JSON
+    const ctx = document.getElementById('evolutionChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length: 38}, (_, i) => i + 1),
+            datasets: [] // Preencheremos com a lógica do views.py
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    reverse: true, // Posição 1 no topo
+                    min: 1, max: 20,
+                    grid: { color: '#333333' },
+                    ticks: { color: '#9E9E9E' }
+                },
+                x: { 
+                    grid: { color: '#333333' },
+                    ticks: { color: '#9E9E9E' }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+</script>
+{% endblock %}

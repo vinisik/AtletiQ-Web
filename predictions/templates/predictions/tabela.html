@@ -1,0 +1,50 @@
+{% extends "predictions/base.html" %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="px-4 animate-fadeIn">
+    <div class="mb-6">
+        <h2 class="text-[#00E676] text-4xl font-black tracking-tighter uppercase flex items-center gap-3">
+            Tabela de Classificação
+        </h2>
+    </div>
+
+    <div class="overflow-x-auto bg-[#1E1E1E] rounded-2xl border border-[#333333] shadow-2xl">
+        <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead>
+                <tr class="bg-[#121212] text-white text-[10px] uppercase tracking-widest border-b border-[#333333]">
+                    <th class="p-4 w-12 text-center">Pos</th>
+                    <th class="p-4">Equipe</th>
+                    <th class="p-4 text-center">PTS</th>
+                    <th class="p-4 text-center">J</th>
+                    <th class="p-4 text-center">V</th>
+                    <th class="p-4 text-center">E</th>
+                    <th class="p-4 text-center">D</th>
+                    <th class="p-4 text-center">GM</th>
+                    <th class="p-4 text-center">GS</th>
+                    <th class="p-4 text-center">SG</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#333333]">
+                {% for time in tabela %}
+                <tr class="hover:bg-white/5 transition-colors group">
+                    <td class="p-4 text-center font-black text-xs {% if forloop.counter <= 4 %} border-l-4 border-blue-600 text-blue-500 {% elif forloop.counter <= 6 %} border-l-4 border-cyan-500 text-cyan-400 {% elif forloop.counter >= 17 %} border-l-4 border-red-600 text-red-500 {% else %} border-l-4 border-transparent text-gray-500 {% endif %}">{{ forloop.counter }}º</td>
+                    <td class="p-4 flex items-center gap-3">
+                        <img src="{{ ESCUDOS|dict_get:time.nome }}" class="w-8 h-8 object-contain">
+                        <span class="font-bold text-white">{{ time.nome }}</span>
+                    </td>
+                    <td class="p-4 text-center font-black text-white text-lg">{{ time.p }}</td>
+                    <td class="p-4 text-center text-white">{{ time.j }}</td>
+                    <td class="p-4 text-center text-white text-xs">{{ time.v }}</td>
+                    <td class="p-4 text-center text-white text-xs">{{ time.e }}</td>
+                    <td class="p-4 text-center text-white text-xs">{{ time.d }}</td>
+                    <td class="p-4 text-center text-white/70 font-mono">{{ time.gm }}</td>
+                    <td class="p-4 text-center text-white/70 font-mono">{{ time.gs }}</td>
+                    <td class="p-4 text-center font-bold {% if time.sg > 0 %}text-blue-400{% elif time.sg < 0 %}text-red-400{% else %}text-gray-500{% endif %}">{{ time.sg }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
