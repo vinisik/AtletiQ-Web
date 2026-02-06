@@ -40,7 +40,8 @@ def obter_contexto_ia():
 
 def classificacao(request):
     """Gera a tabela oficial de 2026 com estatísticas completas de gols."""
-    times = Time.objects.all()
+    times_ids_2026 = Partida.objects.filter(data__year=2026).values_list('home_team_id', flat=True).distinct()
+    times = Time.objects.filter(id__in=times_ids_2026) # Carregar apenas os times de 2026
     tabela = []
     escudos = carregar_escudos_json()
 
@@ -92,6 +93,7 @@ def classificacao(request):
         'tabela': tabela, 
         'ESCUDOS': escudos
     })
+
 
 def calendario(request):
     jogos = Partida.objects.filter(data__year=2026).order_by('rodada', 'data')
