@@ -6,7 +6,7 @@ from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from .models import Time, Partida
-from django.db.models import Q, F, Sum
+from django.db.models import Q, F, Sum, Max
 from .ai_logic.predictor import prever_jogo_especifico, simular_campeonato
 from .ai_logic.feature_engineering import preparar_dados_para_modelo
 from .ai_logic.model_trainer import treinar_modelo, carregar_ia, salvar_ia
@@ -105,9 +105,43 @@ def classificacao(request):
     })
 
 def calendario(request):
-    jogos = Partida.objects.filter(data__year=2026).order_by('rodada', 'data')
+    # Determina qual rodada exibir
+    rodada_param = request.GET.get('rodada')
+    
+    # Descobre a última rodada cadastrada no banco 
+    max_rodada = Partida.objects.filter(data__year=2026).aggregate(m=Max('rodada'))['m'] or 38
+
+    if rodada_param:
+        try:
+            rodada_atual = int(rodada_param)
+        except ValueError:
+            rodada_atual = 1
+    else:
+        # Se não escolher rodada pega a primeira que tem jogos não realizados 
+        # Se o campeonato acabou, mostra a última.
+        proximo_jogo = Partida.objects.filter(data__year=2026, fthg__isnull=True).order_by('rodada').first()
+        rodada_atual = proximo_jogo.rodada if proximo_jogo else max_rodada
+
+    #Filtra os jogos APENAS dessa rodada
+    jogos = Partida.objects.filter(
+        data__year=2026, 
+        rodada=rodada_atual
+    ).order_by('data')
+
+    # Define os botões de navegação
+    rodada_anterior = rodada_atual - 1 if rodada_atual > 1 else None
+    rodada_proxima = rodada_atual + 1 if rodada_atual < max_rodada else None
+
     escudos = carregar_escudos_json()
-    return render(request, 'predictions/calendario.html', {'jogos': jogos, 'ESCUDOS': escudos})
+    
+    return render(request, 'predictions/calendario.html', {
+        'jogos': jogos, 
+        'ESCUDOS': escudos,
+        'rodada_atual': rodada_atual,
+        'anterior': rodada_anterior,
+        'proxima': rodada_proxima
+    })
+
 
 def simulacao(request):
     """Executa a simulação estocástica para o campeonato."""
@@ -163,31 +197,45 @@ def simulacao(request):
 
 def detalhes_confronto(request, partida_id):
     partida = get_object_or_404(Partida, id=partida_id)
-    
-    modelos, encoder, time_stats, cols_model = obter_contexto_ia()
     escudos = carregar_escudos_json()
     
+    # Só treina do zero se o arquivo não existir 
+    modelos, encoder, colunas, time_stats = carregar_ia()
+    
+    if modelos is None or time_stats is None:
+        logger.warning("Cache não encontrado no detalhe do jogo. Treinando...")
+        modelos, encoder, time_stats, colunas = obter_contexto_ia()
+        if modelos:
+            from .ai_logic.model_trainer import salvar_ia
+            salvar_ia(modelos, encoder, colunas, time_stats)
+
     odds = {}
-    if modelos:
-        # Passa time_stats atualizado para calcular a força dos times
-        odds = prever_jogo_especifico(
-            partida.home_team.nome, 
-            partida.away_team.nome, 
-            modelos, 
-            encoder, 
-            time_stats, 
-            cols_model
-        )
+    if modelos and time_stats:
+        try:
+            odds = prever_jogo_especifico(
+                partida.home_team.nome, 
+                partida.away_team.nome, 
+                modelos, 
+                encoder, 
+                time_stats, 
+                colunas
+            )
+        except Exception as e:
+            logger.error(f"Erro na predição detalhada: {e}")
+            odds = {'Casa': 0.33, 'Empate': 0.33, 'Visitante': 0.33}
     else:
-        # Fallback se não houver dados
         odds = {'Casa': 0.33, 'Empate': 0.33, 'Visitante': 0.33}
 
+    # Dados históricos 
     partidas_todas = Partida.objects.all().values('data', 'home_team__nome', 'away_team__nome', 'fthg', 'ftag')
     df_total = pd.DataFrame(list(partidas_todas))
-    df_total.columns = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
     
-    # H2H 
-    _, df_h2h = gerar_confronto_direto(df_total, partida.home_team.nome, partida.away_team.nome)
+    if not df_total.empty:
+        df_total.columns = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
+        _, df_h2h = gerar_confronto_direto(df_total, partida.home_team.nome, partida.away_team.nome)
+        h2h_data = df_h2h.head(5).to_dict('records')
+    else:
+        h2h_data = []
 
     return JsonResponse({
         'encerrado': partida.fthg is not None,
@@ -195,12 +243,12 @@ def detalhes_confronto(request, partida_id):
         'away': partida.away_team.nome,
         'placar_home': partida.fthg,
         'placar_away': partida.ftag,
-        'ultimos_home': obter_ultimos_jogos(partida.home_team.nome),
-        'ultimos_away': obter_ultimos_jogos(partida.away_team.nome),
+        'forma_home': obter_ultimos_jogos(partida.home_team.nome),
+        'forma_away': obter_ultimos_jogos(partida.away_team.nome),
         'prob_casa': f"{odds.get('Casa', 0):.0%}",
         'prob_empate': f"{odds.get('Empate', 0):.0%}",
         'prob_visitante': f"{odds.get('Visitante', 0):.0%}",
-        'h2h_lista': df_h2h.head(5).to_dict('records'),
+        'h2h_lista': h2h_data,
         'ESCUDOS': escudos
     })
 
