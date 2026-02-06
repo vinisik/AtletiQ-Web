@@ -74,6 +74,8 @@ def classificacao(request):
         pontos = (vitorias * 3) + empates
         total_jogos = jogos_casa.count() + jogos_fora.count()
 
+        ultimos = obter_ultimos_jogos(time.nome)
+
         tabela.append({
             'nome': time.nome,
             'p': pontos,
@@ -84,6 +86,7 @@ def classificacao(request):
             'gm': gm,
             'gs': gs,
             'sg': sg,
+            'ultimos': ultimos
         })
 
     # Ordenação oficial Brasileirão
@@ -153,8 +156,8 @@ def detalhes_confronto(request, partida_id):
         'away': partida.away_team.nome,
         'placar_home': partida.fthg,
         'placar_away': partida.ftag,
-        'forma_home': obter_forma_time(partida.home_team.nome),
-        'forma_away': obter_forma_time(partida.away_team.nome),
+        'ultimos_home': obter_ultimos_jogos(partida.home_team.nome),
+        'ultimos_away': obter_ultimos_jogos(partida.away_team.nome),
         'prob_casa': f"{odds.get('Casa', 0):.0%}",
         'prob_empate': f"{odds.get('Empate', 0):.0%}",
         'prob_visitante': f"{odds.get('Visitante', 0):.0%}",
@@ -162,21 +165,26 @@ def detalhes_confronto(request, partida_id):
         'ESCUDOS': escudos
     })
 
-def obter_forma_time(time_nome):
+def obter_ultimos_jogos(time_nome):
     """Retorna os últimos 5 resultados (V, E, D) de um time em 2026."""
     jogos = Partida.objects.filter(
         (Q(home_team__nome=time_nome) | Q(away_team__nome=time_nome)),
         fthg__isnull=False,
+        ftag__isnull=False,
         data__year=2026
     ).order_by('-data')[:5]
 
-    forma = []
+    ultimos = []
     for jogo in jogos:
+        if jogo.fthg is None or jogo.ftag is None:
+            continue
+            
         if jogo.fthg == jogo.ftag:
-            forma.append('E')
+            ultimos.append('E')
         elif (jogo.home_team.nome == time_nome and jogo.fthg > jogo.ftag) or \
              (jogo.away_team.nome == time_nome and jogo.ftag > jogo.fthg):
-            forma.append('V')
+            ultimos.append('V')
         else:
-            forma.append('D')
-    return forma[::-1]
+            ultimos.append('D')
+            
+    return ultimos[::-1]

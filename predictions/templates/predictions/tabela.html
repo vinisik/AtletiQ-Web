@@ -23,6 +23,7 @@
                     <th class="p-4 text-center">GM</th>
                     <th class="p-4 text-center">GS</th>
                     <th class="p-4 text-center">SG</th>
+                    <th class="p-4 text-center">Últimos</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-[#333333]">
@@ -41,6 +42,20 @@
                     <td class="p-4 text-center text-white/70 font-mono">{{ time.gm }}</td>
                     <td class="p-4 text-center text-white/70 font-mono">{{ time.gs }}</td>
                     <td class="p-4 text-center font-bold {% if time.sg > 0 %}text-blue-400{% elif time.sg < 0 %}text-red-400{% else %}text-gray-500{% endif %}">{{ time.sg }}</td>
+                    <td class="p-4">
+                        <div class="flex justify-center gap-1">
+                            {% for resultado in time.ultimos %}
+                                <span class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white
+                                    {% if resultado == 'V' %} bg-[#00E676] shadow-[0_0_8px_#00E676/40]
+                                    {% elif resultado == 'E' %} bg-gray-500
+                                    {% else %} bg-red-500 shadow-[0_0_8px_#ef4444/40] {% endif %}">
+                                    {{ resultado }}
+                                </span>
+                            {% empty %}
+                                <span class="text-gray-600 text-[10px]">-</span>
+                            {% endfor %}
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
