@@ -1,9 +1,39 @@
 import numpy as np
 import pandas as pd
 
+def construir_features_jogo(home, away, time_stats):
+    """
+    Reconstrói o vetor de features para um jogo futuro baseando-se nas últimas estatísticas conhecidas.
+    """
+    def get_last_ema(lista, span=5):
+        if not lista: return 0.5 # Valor neutro se não tiver histórico
+        return pd.Series(lista).ewm(span=span, adjust=False).mean().iloc[-1]
+
+    # Recupera estatísticas
+    stats_h = time_stats.get(home, {'pontos': [], 'gm': [], 'gs': []})
+    stats_a = time_stats.get(away, {'pontos': [], 'gm': [], 'gs': []})
+
+    data = {
+        'HomeTeam': home,
+        'AwayTeam': away,
+        'ForcaGeral_Home': get_last_ema(stats_h['pontos'], span=10),
+        'ForcaGeral_Away': get_last_ema(stats_a['pontos'], span=10),
+        'FormaPontos_Home': get_last_ema(stats_h['pontos'], span=5) * 5,
+        'FormaPontos_Away': get_last_ema(stats_a['pontos'], span=5) * 5,
+        'MediaGolsMarcados_Home': get_last_ema(stats_h['gm'], span=5),
+        'MediaGolsMarcados_Away': get_last_ema(stats_a['gm'], span=5),
+        'MediaGolsSofridos_Home': get_last_ema(stats_h['gs'], span=5),
+        'MediaGolsSofridos_Away': get_last_ema(stats_a['gs'], span=5)
+    }
+    # Momentum
+    data['Momentum_Home'] = data['FormaPontos_Home'] - (data['ForcaGeral_Home'] * 5)
+    data['Momentum_Away'] = data['FormaPontos_Away'] - (data['ForcaGeral_Away'] * 5)
+    
+    return pd.DataFrame([data])
+
 def simular_campeonato(rodadas_total, df_futuros, df_realizados, modelos, encoder, time_stats, colunas):
     """
-    Simulação de Monte Carlo usando Poisson com ajuste de 'Home Edge' (Vantagem em Casa).
+    Simulação de Monte Carlo com ajuste de 'Home Edge' e Fator Caos.
     """
     if isinstance(modelos, dict):
         modelo_ia = modelos.get('resultado') or list(modelos.values())[0]
@@ -12,24 +42,45 @@ def simular_campeonato(rodadas_total, df_futuros, df_realizados, modelos, encode
 
     resultados_simulados = df_realizados.copy()
     
-    MEDIA_GOLS_LIGA = 1.25  
-    HOME_ADVANTAGE = 1.15 # Times em casa marcam ~15% a mais
+    MEDIA_GOLS_LIGA = 1.30  
+    HOME_ADVANTAGE = 1.15 # Vantagem de jogar em casa
 
     for _, jogo in df_futuros.iterrows():
         home, away = jogo['HomeTeam'], jogo['AwayTeam']
         
-        # O modelo deve receber as features de força calculadas no feature_engineering
-        input_data = pd.DataFrame([[home, away]], columns=['HomeTeam', 'AwayTeam'])
+        # Constrói input com dados reais do momento
+        input_data = construir_features_jogo(home, away, time_stats)
         
         try:
+            # O Pipeline trata as colunas automaticamente
             probs = modelo_ia.predict_proba(input_data)[0]
             
-            lambda_home = MEDIA_GOLS_LIGA * (probs[2] / 0.33) * HOME_ADVANTAGE
-            lambda_away = MEDIA_GOLS_LIGA * (probs[0] / 0.33)
-        except:
-            lambda_home, lambda_away = 1.2 * HOME_ADVANTAGE, 1.0
+            # Mapeamento das probabilidades
+            # Assumindo ordem alfabética padrão do sklearn para classes string C, E, V
+            # Verifica classes do modelo. Casa, Empate, Visitante.
+            # Garantir pegando pelo nome das classes se possível, ou assumindo padrão.
+            
+            classes = modelo_ia.classes_
+            idx_casa = np.where(classes == 'Casa')[0][0]
+            idx_vis = np.where(classes == 'Visitante')[0][0]
+            
+            prob_casa = probs[idx_casa]
+            prob_vis = probs[idx_vis]
 
-        # Simulação de gols (Poisson gera a incerteza realista do futebol)
+            # Fator Caos (imprevisibilidade)
+            fator_caos = np.random.normal(1.0, 0.10) # 10% de variância
+
+            lambda_home = (MEDIA_GOLS_LIGA * (prob_casa / 0.33) * HOME_ADVANTAGE) * fator_caos
+            lambda_away = (MEDIA_GOLS_LIGA * (prob_vis / 0.33)) * fator_caos
+            
+            lambda_home = max(0.2, lambda_home) # Nunca zero
+            lambda_away = max(0.2, lambda_away)
+
+        except Exception as e:
+            # Fallback
+            lambda_home, lambda_away = 1.35, 1.05
+
+        # Simulação de gols Poisson
         gols_h = np.random.poisson(lambda_home)
         gols_a = np.random.poisson(lambda_away)
 
@@ -60,27 +111,29 @@ def processar_tabela_final(df):
                 
     res = pd.DataFrame(stats.values())
     res['SG'] = res['GM'] - res['GS']
-    # Ordenação oficial: Pontos, Vitórias, Saldo, GM
     return res.sort_values(by=['P', 'V', 'SG', 'GM'], ascending=False)
 
 def prever_jogo_especifico(home, away, modelos, encoder, time_stats, colunas):
     """
-    Retorna probabilidades reais cruzando a IA com o histórico de confrontos (H2H).
+    Retorna probabilidades reais cruzando a IA com o histórico recente.
     """
     if isinstance(modelos, dict):
         modelo_ia = modelos.get('resultado') or list(modelos.values())[0]
     else:
         modelo_ia = modelos
 
-    input_data = pd.DataFrame([[home, away]], columns=['HomeTeam', 'AwayTeam'])
+    input_data = construir_features_jogo(home, away, time_stats)
     
     try:
         probs = modelo_ia.predict_proba(input_data)[0]
-        # Calibragem para evitar probabilidades extremas 
-        p_vitoria = np.clip(probs[2], 0.1, 0.75) 
-        p_empate = np.clip(probs[1], 0.2, 0.35)
-        p_derrota = 1.0 - p_vitoria - p_empate
+        classes = modelo_ia.classes_
+        
+        # Mapeamento seguro das classes
+        p_vitoria = probs[np.where(classes == 'Casa')[0][0]]
+        p_empate = probs[np.where(classes == 'Empate')[0][0]]
+        p_derrota = probs[np.where(classes == 'Visitante')[0][0]]
+        
     except:
-        p_vitoria, p_empate, p_derrota = 0.40, 0.28, 0.32
+        p_vitoria, p_empate, p_derrota = 0.33, 0.33, 0.33
 
     return {'Casa': p_vitoria, 'Empate': p_empate, 'Visitante': p_derrota}

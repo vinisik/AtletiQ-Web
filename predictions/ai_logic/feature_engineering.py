@@ -3,12 +3,12 @@ import numpy as np
 
 def preparar_dados_para_modelo(df_historico):
     """
-    Cria as variáveis alvo e calcula features de forma, incluindo a sequência de resultados.
+    Cria as variáveis alvo e calcula features de forma usando Média Móvel Exponencial (EMA).
     """
     if df_historico is None or df_historico.empty:
         return pd.DataFrame(), {}
 
-    print("Preparando dados e calculando features avançadas...")
+    print("Preparando dados com Média Móvel Exponencial (EMA)...")
     df_historico['Date'] = pd.to_datetime(df_historico['Date'])
     df_historico = df_historico.sort_values(by='Date').reset_index(drop=True)
 
@@ -29,52 +29,52 @@ def preparar_dados_para_modelo(df_historico):
     time_stats = {}
     features_calculadas = []
 
+    # Função auxiliar para EMA 
+    def calcular_ema(lista, span=5):
+        if not lista: return 0
+        return pd.Series(lista).ewm(span=span, adjust=False).mean().iloc[-1]
+
     for index, row in df_historico.iterrows():
         time_casa, time_visitante = row['HomeTeam'], row['AwayTeam']
         features_jogo = {}
         
         for time, lado in [(time_casa, 'Home'), (time_visitante, 'Away')]:
             if time not in time_stats:
-                # 'seq' vai guardar ['V', 'E', 'D', ...]
-                time_stats[time] = {'pontos': [], 'gm': [], 'gs': [], 'seq': []}
+                time_stats[time] = {'pontos': [], 'gm': [], 'gs': []}
             
-            # Features
-            if len(time_stats[time]['pontos']) > 0:
-                features_jogo[f'ForcaGeral_{lado}'] = np.mean(time_stats[time]['pontos'])
-            else:
-                features_jogo[f'ForcaGeral_{lado}'] = 1.0
+            stats = time_stats[time]
             
-            features_jogo[f'FormaPontos_{lado}'] = sum(time_stats[time]['pontos'][-5:])
-            features_jogo[f'MediaGolsMarcados_{lado}'] = np.mean(time_stats[time]['gm'][-5:]) if time_stats[time]['gm'] else 0
-            features_jogo[f'MediaGolsSofridos_{lado}'] = np.mean(time_stats[time]['gs'][-5:]) if time_stats[time]['gs'] else 0
-            features_jogo[f'SaldoRecente_{lado}'] = (
-                np.mean(time_stats[time]['gm'][-3:]) - np.mean(time_stats[time]['gs'][-3:]) 
-                if len(time_stats[time]['gm']) >= 3 else 0
-            )
-        
+            # Features baseadas em EMA 
+            features_jogo[f'ForcaGeral_{lado}'] = calcular_ema(stats['pontos'], span=10) # Longo prazo
+            features_jogo[f'FormaPontos_{lado}'] = calcular_ema(stats['pontos'], span=5) * 5 # Curto prazo (escala 0-15)
+            features_jogo[f'MediaGolsMarcados_{lado}'] = calcular_ema(stats['gm'], span=5)
+            features_jogo[f'MediaGolsSofridos_{lado}'] = calcular_ema(stats['gs'], span=5)
+            
+            # Feature de Momento
+            features_jogo[f'Momentum_{lado}'] = features_jogo[f'FormaPontos_{lado}'] - (features_jogo[f'ForcaGeral_{lado}'] * 5)
+
         features_calculadas.append(features_jogo)
         
-        # Lógica para definir a letra do resultado (V, E, D)
+        # Atualiza histórico após cálculo 
         g_casa, g_vis = row['FTHG'], row['FTAG']
-        res_c = 'V' if g_casa > g_vis else 'E' if g_casa == g_vis else 'D'
-        res_v = 'V' if g_vis > g_casa else 'E' if g_vis == g_casa else 'D'
+        p_casa, p_vis = (3, 0) if g_casa > g_vis else (0, 3) if g_vis > g_casa else (1, 1)
 
-        # Atualiza histórico
-        time_stats[time_casa]['pontos'].append(3 if res_c == 'V' else 1 if res_c == 'E' else 0)
-        time_stats[time_casa]['seq'].append(res_c) # Salva a letra
-        time_stats[time_casa]['gm'].append(g_casa); time_stats[time_casa]['gs'].append(g_vis)
+        time_stats[time_casa]['pontos'].append(p_casa)
+        time_stats[time_casa]['gm'].append(g_casa)
+        time_stats[time_casa]['gs'].append(g_vis)
         
-        time_stats[time_visitante]['pontos'].append(3 if res_v == 'V' else 1 if res_v == 'E' else 0)
-        time_stats[time_visitante]['seq'].append(res_v) # Salva a letra
-        time_stats[time_visitante]['gm'].append(g_vis); time_stats[time_visitante]['gs'].append(g_casa)
+        time_stats[time_visitante]['pontos'].append(p_vis)
+        time_stats[time_visitante]['gm'].append(g_vis)
+        time_stats[time_visitante]['gs'].append(g_casa)
 
     df_features = pd.DataFrame(features_calculadas, index=df_historico.index)
     df_final = pd.concat([df_historico, df_features], axis=1)
     
+    # Remove as primeiras rodadas onde as médias são instáveis
     return df_final.iloc[20:].reset_index(drop=True), time_stats
 
 def gerar_dados_evolucao(df_total):
-    """Gera histórico de posições para o gráfico."""
+    """(Mantido igual ao original pois é apenas visualização)"""
     if df_total is None or df_total.empty: return {}
     df = df_total[df_total['FTHG'].notna()].copy()
     df['Rodada'] = pd.to_numeric(df['Rodada'], errors='coerce')

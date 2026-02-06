@@ -9,7 +9,7 @@ from .models import Time, Partida
 from django.db.models import Q, F, Sum
 from .ai_logic.predictor import prever_jogo_especifico, simular_campeonato
 from .ai_logic.feature_engineering import preparar_dados_para_modelo
-from .ai_logic.model_trainer import treinar_modelo, carregar_ia
+from .ai_logic.model_trainer import treinar_modelo, carregar_ia, salvar_ia
 from .ai_logic.analysis import gerar_confronto_direto
 
 logger = logging.getLogger('predictions')
@@ -25,28 +25,37 @@ def carregar_escudos_json():
         return {}
 
 def obter_contexto_ia():
-    """Prepara os modelos e estatísticas para predições pontuais."""
+    """
+    Treina um modelo 'on-the-fly' com os dados atuais do banco.
+    Útil para fallback ou predições detalhadas de um jogo específico.
+    """
     partidas_query = Partida.objects.filter(fthg__isnull=False).values(
         'data', 'home_team__nome', 'away_team__nome', 'fthg', 'ftag', 'rodada'
     )
-    if not partidas_query:
+    
+    # Se não houver jogos suficientes, retorna None
+    if not partidas_query or len(partidas_query) < 20: 
         return None, None, None, None
 
     df_res = pd.DataFrame(list(partidas_query))
     df_res.columns = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'Rodada']
+    
+    # Prepara dados 
     df_treino, time_stats = preparar_dados_para_modelo(df_res)
+    
+    # Treina o modelo 
     modelos, encoder, cols_model = treinar_modelo(df_treino)
+    
     return modelos, encoder, time_stats, cols_model
 
 def classificacao(request):
-    """Gera a tabela oficial de 2026 com estatísticas completas de gols."""
+    """Gera a tabela oficial de 2026 com estatísticas completas."""
     times_ids_2026 = Partida.objects.filter(data__year=2026).values_list('home_team_id', flat=True).distinct()
-    times = Time.objects.filter(id__in=times_ids_2026) # Carregar apenas os times de 2026
+    times = Time.objects.filter(id__in=times_ids_2026)
     tabela = []
     escudos = carregar_escudos_json()
 
     for time in times:
-        # Filtra apenas jogos de 2026 encerrados
         jogos_casa = Partida.objects.filter(home_team=time, data__year=2026, fthg__isnull=False)
         jogos_fora = Partida.objects.filter(away_team=time, data__year=2026, fthg__isnull=False)
 
@@ -62,7 +71,6 @@ def classificacao(request):
         d_fora = jogos_fora.filter(ftag__lt=F('fthg')).count()
         derrotas = d_casa + d_fora
 
-        # Gols Marcados (GM) e Gols Sofridos (GS)
         gm_casa = jogos_casa.aggregate(Sum('fthg'))['fthg__sum'] or 0
         gm_fora = jogos_fora.aggregate(Sum('ftag'))['ftag__sum'] or 0
         gs_casa = jogos_casa.aggregate(Sum('ftag'))['ftag__sum'] or 0
@@ -89,7 +97,6 @@ def classificacao(request):
             'ultimos': ultimos
         })
 
-    # Ordenação oficial Brasileirão
     tabela = sorted(tabela, key=lambda x: (-x['p'], -x['v'], -x['sg'], -x['gm']))
 
     return render(request, 'predictions/tabela.html', {
@@ -97,18 +104,34 @@ def classificacao(request):
         'ESCUDOS': escudos
     })
 
-
 def calendario(request):
     jogos = Partida.objects.filter(data__year=2026).order_by('rodada', 'data')
     escudos = carregar_escudos_json()
     return render(request, 'predictions/calendario.html', {'jogos': jogos, 'ESCUDOS': escudos})
 
 def simulacao(request):
-    """Executa a simulação estocástica para o Brasileirão 2026."""
+    """Executa a simulação estocástica para o campeonato."""
     try:
-        modelos_dict, encoder, colunas, time_stats = carregar_ia()
         escudos = carregar_escudos_json()
         
+        # Tenta carregar IA do cache
+        modelos_dict, encoder, colunas, time_stats = carregar_ia()
+        
+        # Se não existir cache, treina agora 
+        if modelos_dict is None or time_stats is None:
+            logger.warning("Cache de IA não encontrado. Treinando novo modelo...")
+            modelos_dict, encoder, time_stats, colunas = obter_contexto_ia()
+            
+            # Se ainda falhar retorna erro
+            if modelos_dict is None:
+                return render(request, 'predictions/simulacao.html', {
+                    'error': 'Dados insuficientes para treinar a IA (Mínimo 20 jogos).'
+                })
+            
+            # Salva para ser mais rápido
+            salvar_ia(modelos_dict, encoder, colunas, time_stats)
+
+        # Prepara dados para simulação
         realizados_qs = Partida.objects.filter(data__year=2026, fthg__isnull=False)
         futuros_qs = Partida.objects.filter(data__year=2026, fthg__isnull=True)
 
@@ -121,9 +144,10 @@ def simulacao(request):
         df_fut = pd.DataFrame(list(futuros_qs.values('home_team__nome', 'away_team__nome', 'rodada')))
         df_fut.columns = ['HomeTeam', 'AwayTeam', 'Rodada']
 
+        # Executa simulação
         res_df = simular_campeonato(38, df_fut, df_res, modelos_dict, encoder, time_stats, colunas)
         
-        # Limpeza para garantir que o escudo carregue corretamente no filtro dict_get
+        # Limpeza de nomes
         res_df['Time'] = res_df['Time'].astype(str).str.replace(r'^\d+\s+', '', regex=True).str.strip()
         
         tabela_simulada = res_df.to_dict('records')
@@ -135,19 +159,34 @@ def simulacao(request):
 
     except Exception as e:
         logger.exception("Falha na execução da simulação")
-        return render(request, 'predictions/simulacao.html', {'error': f"Erro técnico: {str(e)}"})
+        return render(request, 'predictions/simulacao.html', {'error': f"Erro técnico na simulação: {str(e)}"})
 
 def detalhes_confronto(request, partida_id):
     partida = get_object_or_404(Partida, id=partida_id)
+    
     modelos, encoder, time_stats, cols_model = obter_contexto_ia()
     escudos = carregar_escudos_json()
     
-    odds = prever_jogo_especifico(partida.home_team.nome, partida.away_team.nome, modelos, encoder, time_stats, cols_model)
+    odds = {}
+    if modelos:
+        # Passa time_stats atualizado para calcular a força dos times
+        odds = prever_jogo_especifico(
+            partida.home_team.nome, 
+            partida.away_team.nome, 
+            modelos, 
+            encoder, 
+            time_stats, 
+            cols_model
+        )
+    else:
+        # Fallback se não houver dados
+        odds = {'Casa': 0.33, 'Empate': 0.33, 'Visitante': 0.33}
 
     partidas_todas = Partida.objects.all().values('data', 'home_team__nome', 'away_team__nome', 'fthg', 'ftag')
     df_total = pd.DataFrame(list(partidas_todas))
     df_total.columns = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
     
+    # H2H 
     _, df_h2h = gerar_confronto_direto(df_total, partida.home_team.nome, partida.away_team.nome)
 
     return JsonResponse({
