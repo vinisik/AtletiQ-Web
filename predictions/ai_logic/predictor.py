@@ -115,8 +115,14 @@ def processar_tabela_final(df):
 
 def prever_jogo_especifico(home, away, modelos, encoder, time_stats, colunas):
     """
-    Retorna probabilidades reais cruzando a IA com o histórico recente.
+    Retorna probabilidades. Se falhar, usa heurística de vantagem em casa.
     """
+    # Se não houver modelo treinado 
+    if not modelos:
+        # Retorna probabilidade padrão estatística do futebol (Mandante tem vantagem)
+        # Casa: 45%, Empate: 29%, Visitante: 26%
+        return {'Casa': 0.45, 'Empate': 0.29, 'Visitante': 0.26}
+
     if isinstance(modelos, dict):
         modelo_ia = modelos.get('resultado') or list(modelos.values())[0]
     else:
@@ -129,11 +135,20 @@ def prever_jogo_especifico(home, away, modelos, encoder, time_stats, colunas):
         classes = modelo_ia.classes_
         
         # Mapeamento seguro das classes
-        p_vitoria = probs[np.where(classes == 'Casa')[0][0]]
-        p_empate = probs[np.where(classes == 'Empate')[0][0]]
-        p_derrota = probs[np.where(classes == 'Visitante')[0][0]]
+        try:
+            idx_casa = np.where(classes == 'Casa')[0][0]
+            idx_empate = np.where(classes == 'Empate')[0][0]
+            idx_vis = np.where(classes == 'Visitante')[0][0]
+            
+            p_vitoria = probs[idx_casa]
+            p_empate = probs[idx_empate]
+            p_derrota = probs[idx_vis]
+        except:
+            # Fallback se as classes não baterem
+            p_vitoria, p_empate, p_derrota = 0.45, 0.30, 0.25
         
-    except:
-        p_vitoria, p_empate, p_derrota = 0.33, 0.33, 0.33
+    except Exception as e:
+        # Se der erro matemático, assume vantagem de casa
+        p_vitoria, p_empate, p_derrota = 0.45, 0.29, 0.26
 
     return {'Casa': p_vitoria, 'Empate': p_empate, 'Visitante': p_derrota}

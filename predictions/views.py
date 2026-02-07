@@ -34,7 +34,7 @@ def obter_contexto_ia():
     )
     
     # Se não houver jogos suficientes, retorna None
-    if not partidas_query or len(partidas_query) < 20: 
+    if not partidas_query: 
         return None, None, None, None
 
     df_res = pd.DataFrame(list(partidas_query))
