@@ -18,3 +18,20 @@ class Partida(models.Model):
 
     def __str__(self):
         return f"R{self.rodada}: {self.home_team} x {self.away_team}"
+    
+class Artilheiro(models.Model):
+    nome = models.CharField(max_length=100)
+    time = models.CharField(max_length=100)
+    gols = models.IntegerField()
+    assistencias = models.IntegerField(default=0, null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.nome} ({self.time}) - {self.gols} gols"
+
+class VotoPopular(models.Model):
+    partida = models.ForeignKey(Partida, on_delete=models.CASCADE, related_name='votos')
+    escolha = models.CharField(max_length=1) 
+    ip_address = models.GenericIPAddressField(null=True, blank=True) # Para evitar spam 
+
+    def __str__(self):
+        return f"Voto {self.escolha} no jogo {self.partida}"

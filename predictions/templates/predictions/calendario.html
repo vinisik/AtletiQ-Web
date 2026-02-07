@@ -98,22 +98,18 @@
         </div>
         {% empty %}
         <div class="col-span-full py-16 text-center border-2 border-dashed border-[#333] rounded-3xl bg-[#121212]/50">
-            <div class="text-[#00E676] mb-3 opacity-50">
-                <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            </div>
             <p class="text-gray-400 font-bold text-lg">Sem jogos nesta rodada</p>
-            <p class="text-gray-600 text-sm mt-1">Aguarde a atualização do calendário.</p>
         </div>
         {% endfor %}
     </div>
 </div>
 
 <div id="modalIA" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-50 backdrop-blur-md" style="display: none;">
-    <div onclick="event.stopPropagation()" class="bg-[#1E1E1E] w-full max-w-xl rounded-[2rem] border border-[#444] overflow-hidden shadow-2xl relative animate-fadeInUp">
+    <div class="bg-[#1E1E1E] w-full max-w-xl rounded-[2rem] border border-[#444] overflow-hidden shadow-2xl relative animate-fadeInUp" onclick="event.stopPropagation()">
         <div class="p-4 border-b border-[#333] flex justify-between items-center bg-[#181818]">
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-[#00E676] animate-pulse"></span>
-                <span class="text-[#00E676] font-black tracking-widest text-[10px] uppercase">Análise H2H</span>
+                <span class="text-[#00E676] font-black tracking-widest text-[10px] uppercase">Análise AtletiQ</span>
             </div>
             <button id="btnFechar" class="bg-[#333] hover:bg-red-500/20 hover:text-red-500 text-gray-400 w-8 h-8 rounded-full transition-all flex items-center justify-center font-bold">✕</button>
         </div>
@@ -126,115 +122,236 @@
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { bg: #121212; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #333; border-radius: 20px; }
-    @keyframes fadeInUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .animate-fadeInUp { animation: fadeInUp 0.3s ease-out; }
 </style>
 
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
 <script>
-    const ESCUDOS_DATA = {{ ESCUDOS|safe }};
-    const modal = document.getElementById('modalIA');
+    document.addEventListener('DOMContentLoaded', function() {
+        const ESCUDOS_DATA = {{ ESCUDOS|safe }};
+        const modal = document.getElementById('modalIA');
+        const btnFechar = document.getElementById('btnFechar');
 
-    function abrirModal(id) {
-        modal.style.display = 'flex';
-        modal.classList.remove('hidden');
-        document.getElementById('conteudoModal').innerHTML = `
-            <div class="flex flex-col items-center justify-center py-12 gap-4">
-                <div class="w-12 h-12 border-4 border-[#333] border-t-[#00E676] rounded-full animate-spin"></div>
-                <p class="text-gray-500 text-xs font-mono tracking-widest uppercase animate-pulse">Gerando Análise...</p>
-            </div>`;
-
-        fetch(`/detalhes/${id}/`).then(res => res.json()).then(data => {
-            const bolinhas = (l) => l.map(r => `<div class="w-2 h-2 rounded-full ${r==='V'?'bg-[#00E676]':r==='E'?'bg-gray-500':'bg-red-500'}"></div>`).join('');
+        window.abrirModal = function(id) {
+            if(!modal) return;
             
-            // CORREÇÃO AQUI: Mapeando as chaves corretas do backend (Data, Mandante, Visitante, GM, GV)
-            const h2hHtml = data.h2h_lista && data.h2h_lista.length > 0 ? data.h2h_lista.map(jogo => `
-                <div class="flex items-center justify-between text-[11px] py-3 border-b border-[#333] last:border-0 hover:bg-[#252525] px-2 rounded transition-colors">
-                    <span class="text-gray-500 font-mono w-20 text-center">${jogo.Data ? new Date(jogo.Data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '--'}</span>
-                    <div class="flex-1 flex justify-center items-center gap-3 font-bold">
-                        <span class="${(jogo.Mandante === data.home) ? 'text-white' : 'text-gray-400'} text-right flex-1 truncate">${jogo.Mandante}</span>
-                        <span class="bg-[#121212] px-2 py-1 rounded text-[#00E676] border border-[#333] min-w-[45px] text-center">${parseInt(jogo.GM)} - ${parseInt(jogo.GV)}</span>
-                        <span class="${(jogo.Visitante === data.away) ? 'text-white' : 'text-gray-400'} text-left flex-1 truncate">${jogo.Visitante}</span>
-                    </div>
-                </div>
-            `).join('') : '<p class="text-gray-500 text-center text-xs py-4 italic">Sem histórico recente.</p>';
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            
+            const content = document.getElementById('conteudoModal');
+            if(content) {
+                content.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12 gap-4">
+                        <div class="w-12 h-12 border-4 border-[#333] border-t-[#00E676] rounded-full animate-spin"></div>
+                        <p class="text-gray-500 text-xs font-mono tracking-widest uppercase animate-pulse">Carregando dados...</p>
+                    </div>`;
+            }
 
-            const infoCentral = data.encerrado 
-                ? `<div class="flex flex-col items-center"><div class="px-6 py-2 rounded-2xl border border-[#333] bg-[#121212] text-4xl font-black text-[#00E676] tracking-widest shadow-lg">${data.placar_home}-${data.placar_away}</div><span class="text-[9px] text-gray-500 uppercase mt-2 font-bold tracking-widest">Finalizado</span></div>`
-                : `<div class="flex flex-col items-center gap-1"><div class="text-gray-700 font-black text-4xl uppercase select-none">VS</div><span class="text-[9px] text-[#00E676] bg-[#00E676]/10 px-2 py-1 rounded border border-[#00E676]/20 uppercase font-bold tracking-widest">Em Breve</span></div>`;
+            fetch(`/detalhes/${id}/`)
+                .then(res => res.json())
+                .then(data => {
+                    const formatPct = (val) => {
+                        const num = parseFloat(val);
+                        return !isNaN(num) ? Math.round(num * 100) : 0;
+                    };
 
-            document.getElementById('conteudoModal').innerHTML = `
-                <div class="flex items-start justify-between mb-10 relative">
-                    <div class="absolute top-10 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#333] to-transparent z-0"></div>
+                    const bolinhas = (l) => l ? l.map(r => 
+                        `<div class="w-2 h-2 rounded-full ${r==='V'?'bg-[#00E676]':r==='E'?'bg-gray-500':'bg-red-500'}"></div>`
+                    ).join('') : '';
 
-                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center">
-                        <div class="relative mb-3 group">
-                            <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
-                            <img src="${ESCUDOS_DATA[data.home] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
+                    const h2hHtml = data.h2h_lista && data.h2h_lista.length > 0 ? data.h2h_lista.map(jogo => `
+                        <div class="flex items-center justify-between text-[11px] py-3 border-b border-[#333] last:border-0 hover:bg-[#252525] px-2 rounded transition-colors">
+                            <span class="text-gray-500 font-mono w-20 text-center">${jogo.Data ? new Date(jogo.Data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '--'}</span>
+                            <div class="flex-1 flex justify-center items-center gap-3 font-bold">
+                                <span class="${(jogo.Mandante === data.home) ? 'text-white' : 'text-gray-400'} text-right flex-1 truncate">${jogo.Mandante}</span>
+                                <span class="bg-[#121212] px-2 py-1 rounded text-[#00E676] border border-[#333] min-w-[45px] text-center">${jogo.GM !== null ? parseInt(jogo.GM) : 0} - ${jogo.GV !== null ? parseInt(jogo.GV) : 0}</span>
+                                <span class="${(jogo.Visitante === data.away) ? 'text-white' : 'text-gray-400'} text-left flex-1 truncate">${jogo.Visitante}</span>
+                            </div>
                         </div>
-                        <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2">${data.home}</div>
-                        <div class="flex gap-1.5 bg-[#121212] px-3 py-1.5 rounded-full border border-[#333]">${bolinhas(data.forma_home)}</div>
-                        <span class="text-[11px] text-gray-600 font-mono">Últimos Jogos</span>
-                    </div>
-                    
-                    <div class="w-1/3 flex justify-center pt-4 relative z-10">${infoCentral}</div>
-                    
-                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center">
-                        <div class="relative mb-3 group">
-                            <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
-                            <img src="${ESCUDOS_DATA[data.away] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
-                        </div>
-                        <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2">${data.away}</div>
-                        <div class="flex gap-1.5 bg-[#121212] px-3 py-1.5 rounded-full border border-[#333]">${bolinhas(data.forma_away)}</div>
-                        <span class="text-[11px] text-gray-600 font-mono">Últimos Jogos</span>
-                    </div>
-                </div>
+                    `).join('') : '<p class="text-gray-500 text-center text-xs py-4 italic">Sem histórico recente.</p>';
+
+                    const infoCentral = data.encerrado 
+                        ? `<div class="flex flex-col items-center"><div class="px-6 py-2 rounded-2xl border border-[#333] bg-[#121212] text-4xl font-black text-[#00E676] tracking-widest shadow-lg">${data.placar_home}-${data.placar_away}</div><span class="text-[9px] text-gray-500 uppercase mt-2 font-bold tracking-widest">Finalizado</span></div>`
+                        : `<div class="flex flex-col items-center gap-1"><div class="text-gray-700 font-black text-4xl uppercase select-none">VS</div><span class="text-[9px] text-[#00E676] bg-[#00E676]/10 px-2 py-1 rounded border border-[#00E676]/20 uppercase font-bold tracking-widest">Em Breve</span></div>`;
+
+                    if(content) {
+                        content.innerHTML = `
+                            <div id="shareCard" class="bg-[#1E1E1E] p-4 rounded-xl border border-[#333]/50">
+                                <div class="flex items-center justify-between mb-4">
+                                     <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Brasileirão 2026</span>
+                                     <div class="flex items-center gap-1">
+                                        <span class="w-2 h-2 bg-[#00E676] rounded-full"></span>
+                                        <span class="text-[10px] text-[#00E676] font-bold uppercase">AtletiQ AI</span>
+                                     </div>
+                                </div>
+
+                                <div class="flex items-start justify-between mb-10 relative">
+                                    <div class="absolute top-10 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#333] to-transparent z-0"></div>
+
+                                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center">
+                                        <div class="relative mb-3 group">
+                                            <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
+                                            <img src="${ESCUDOS_DATA[data.home] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
+                                        </div>
+                                        <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2">${data.home}</div>
+                                        <div class="flex gap-1.5 bg-[#121212] px-3 py-1.5 rounded-full border border-[#333]">${bolinhas(data.forma_home)}</div>
+                                        <span class="text-[11px] text-gray-600 font-mono mt-1">Últimos Jogos</span>
+                                    </div>
+                                    
+                                    <div class="w-1/3 flex justify-center pt-4 relative z-10">${infoCentral}</div>
+                                    
+                                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center">
+                                        <div class="relative mb-3 group">
+                                            <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
+                                            <img src="${ESCUDOS_DATA[data.away] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
+                                        </div>
+                                        <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2">${data.away}</div>
+                                        <div class="flex gap-1.5 bg-[#121212] px-3 py-1.5 rounded-full border border-[#333]">${bolinhas(data.forma_away)}</div>
+                                        <span class="text-[11px] text-gray-600 font-mono mt-1">Últimos Jogos</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="bg-[#181818] rounded-2xl p-5 border border-[#333] mb-4 relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 p-2 opacity-10"><svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"></path></svg></div>
+                                    <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
+                                        Probabilidades Calculadas
+                                    </h4>
+                                    <div class="grid grid-cols-3 gap-4 relative z-10">
+                                        <div class="text-center">
+                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Casa</div>
+                                            <div class="bg-[#00E676]/10 border border-[#00E676]/30 rounded-b-lg p-3 text-[#00E676] font-black text-2xl">${formatPct(data.prob_casa)}%</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Empate</div>
+                                            <div class="bg-[#222] border border-[#333] rounded-b-lg p-3 text-gray-300 font-black text-2xl">${formatPct(data.prob_empate)}%</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Fora</div>
+                                            <div class="bg-blue-500/10 border border-blue-500/30 rounded-b-lg p-3 text-blue-400 font-black text-2xl">${formatPct(data.prob_visitante)}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-6 border-t border-[#333] pt-6">
+                                <h4 class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-[#00E676]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                    Faça sua Votação
+                                </h4>
+                                
+                                <div class="flex gap-3 mb-4" id="btnsVotacao">
+                                    <button onclick="votar('${id}', 'H')" class="flex-1 bg-[#121212] hover:bg-[#00E676] hover:text-black border border-[#333] rounded-lg py-3 text-xs font-bold transition-all uppercase tracking-wide">Casa</button>
+                                    <button onclick="votar('${id}', 'D')" class="flex-1 bg-[#121212] hover:bg-gray-400 hover:text-black border border-[#333] rounded-lg py-3 text-xs font-bold transition-all uppercase tracking-wide">Empate</button>
+                                    <button onclick="votar('${id}', 'A')" class="flex-1 bg-[#121212] hover:bg-blue-500 hover:text-black border border-[#333] rounded-lg py-3 text-xs font-bold transition-all uppercase tracking-wide">Fora</button>
+                                </div>
+
+                                <div id="barrasVotacao" class="hidden space-y-3 text-[10px] font-bold uppercase"></div>
+                            </div>
+
+                            <button onclick="compartilharPrevisao()" class="mt-8 w-full bg-[#00E676] text-black font-black uppercase tracking-widest py-4 rounded-xl hover:bg-[#00c865] transition-transform active:scale-[0.98] flex items-center justify-center gap-3 text-sm">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                                Compartilhar Previsão
+                            </button>
+
+                            <div class="mt-8">
+                                <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    Histórico Recente (H2H)
+                                </h4>
+                                <div class="bg-[#121212] rounded-2xl p-2 border border-[#333] max-h-40 overflow-y-auto custom-scrollbar">
+                                    ${h2hHtml}
+                                </div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    if(content) content.innerHTML = `<p class="text-red-500 text-center p-4 text-xs">Erro ao carregar. Tente novamente.</p>`;
+                });
+        };
+
+        window.votar = function(id, escolha) {
+            fetch(`/votar/${id}/`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ escolha: escolha })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.error) {
+                    alert(data.error);
+                    return;
+                }
+                const btns = document.getElementById('btnsVotacao');
+                const barras = document.getElementById('barrasVotacao');
                 
-                <div class="bg-[#181818] rounded-2xl p-5 border border-[#333] mb-8 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-2 opacity-10"><svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"></path></svg></div>
-                    <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
-                        Probabilidades Calculadas
-                    </h4>
-                    <div class="grid grid-cols-3 gap-4 relative z-10">
-                        <div class="text-center">
-                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Casa</div>
-                            <div class="bg-[#00E676]/10 border border-[#00E676]/30 rounded-b-lg p-3 text-[#00E676] font-black text-2xl">${data.prob_casa}</div>
+                if(btns) btns.classList.add('hidden');
+                if(barras) {
+                    barras.classList.remove('hidden');
+                    barras.innerHTML = `
+                        <div class="flex items-center gap-3 animate-fadeIn">
+                            <span class="w-8 text-right text-gray-400">Casa</span>
+                            <div class="flex-1 h-3 bg-[#121212] rounded-full overflow-hidden border border-[#333]">
+                                <div class="h-full bg-[#00E676]" style="width: ${data.H}%"></div>
+                            </div>
+                            <span class="w-8 text-right text-[#00E676]">${data.H}%</span>
                         </div>
-                        <div class="text-center">
-                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Empate</div>
-                            <div class="bg-[#222] border border-[#333] rounded-b-lg p-3 text-gray-300 font-black text-2xl">${data.prob_empate}</div>
+                        <div class="flex items-center gap-3 animate-fadeIn" style="animation-delay: 0.1s">
+                            <span class="w-8 text-right text-gray-400">Emp</span>
+                            <div class="flex-1 h-3 bg-[#121212] rounded-full overflow-hidden border border-[#333]">
+                                <div class="h-full bg-gray-500" style="width: ${data.D}%"></div>
+                            </div>
+                            <span class="w-8 text-right text-gray-500">${data.D}%</span>
                         </div>
-                        <div class="text-center">
-                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Fora</div>
-                            <div class="bg-blue-500/10 border border-blue-500/30 rounded-b-lg p-3 text-blue-400 font-black text-2xl">${data.prob_visitante}</div>
+                        <div class="flex items-center gap-3 animate-fadeIn" style="animation-delay: 0.2s">
+                            <span class="w-8 text-right text-gray-400">Fora</span>
+                            <div class="flex-1 h-3 bg-[#121212] rounded-full overflow-hidden border border-[#333]">
+                                <div class="h-full bg-blue-500" style="width: ${data.A}%"></div>
+                            </div>
+                            <span class="w-8 text-right text-blue-500">${data.A}%</span>
                         </div>
-                    </div>
-                </div>
+                        <div class="text-center text-[9px] text-gray-600 mt-3 font-mono tracking-widest uppercase">${data.total} torcedores votaram</div>
+                    `;
+                }
+            });
+        };
 
-                <div class="mt-4">
-                    <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-3 flex items-center gap-2">
-                        Histórico Recente (H2H)
-                    </h4>
-                    <div class="bg-[#121212] rounded-2xl p-2 border border-[#333] max-h-40 overflow-y-auto custom-scrollbar">
-                        ${h2hHtml}
-                    </div>
-                </div>
-            `;
-        });
-    }
+        window.compartilharPrevisao = function() {
+            const card = document.getElementById('shareCard');
+            if(!card) return;
 
-    document.getElementById('btnFechar').onclick = () => {
-        modal.style.display = 'none';
-        modal.classList.add('hidden');
-    };
+            const originalStyle = card.style.cssText;
+            card.style.borderRadius = "0"; 
+            
+            html2canvas(card, { 
+                backgroundColor: "#121212", 
+                scale: 3, 
+                logging: false
+            }).then(canvas => {
+                card.style.cssText = originalStyle;
+                const link = document.createElement('a');
+                link.download = 'previsao-atletiq.png';
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            });
+        };
 
-    modal.onclick = (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-            modal.classList.add('hidden');
+        if(btnFechar && modal) {
+            btnFechar.onclick = () => {
+                modal.style.display = 'none';
+                modal.classList.add('hidden');
+            };
         }
-    }
+
+        if(modal) {
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    modal.classList.add('hidden');
+                }
+            }
+        }
+    });
 </script>
 {% endblock %}

@@ -3,8 +3,13 @@ import logging
 import json
 import os
 from django.conf import settings
-from django.shortcuts import render, get_object_or_404
+from django.db import models
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from .ai_logic.web_scraper import AtletiQScraper
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import VotoPopular, Partida
 from .models import Time, Partida
 from django.db.models import Q, F, Sum, Max
 from .ai_logic.predictor import prever_jogo_especifico, simular_campeonato
@@ -47,6 +52,7 @@ def obter_contexto_ia():
     modelos, encoder, cols_model = treinar_modelo(df_treino)
     
     return modelos, encoder, time_stats, cols_model
+
 
 def classificacao(request):
     """Gera a tabela oficial de 2026 com estatísticas completas."""
@@ -196,61 +202,85 @@ def simulacao(request):
         return render(request, 'predictions/simulacao.html', {'error': f"Erro técnico na simulação: {str(e)}"})
 
 def detalhes_confronto(request, partida_id):
-    partida = get_object_or_404(Partida, id=partida_id)
-    escudos = carregar_escudos_json()
-    
-    # Só treina do zero se o arquivo não existir 
-    modelos, encoder, colunas, time_stats = carregar_ia()
-    
-    if modelos is None or time_stats is None:
-        logger.warning("Cache não encontrado no detalhe do jogo. Treinando...")
-        modelos, encoder, time_stats, colunas = obter_contexto_ia()
-        if modelos:
-            from .ai_logic.model_trainer import salvar_ia
-            salvar_ia(modelos, encoder, colunas, time_stats)
+    try:
+        partida = get_object_or_404(Partida, pk=partida_id)
+        
+        # Busca Histórico (H2H) 
+        h2h = Partida.objects.filter(
+            home_team=partida.home_team, 
+            away_team=partida.away_team,
+            fthg__isnull=False
+        ).exclude(pk=partida.pk).order_by('-data')[:5]
+        
+        h2h_lista = []
+        for p in h2h:
+            h2h_lista.append({
+                'Data': p.data.isoformat() if p.data else None,
+                'Mandante': p.home_team.nome,
+                'Visitante': p.away_team.nome,
+                'GM': p.fthg,
+                'GV': p.ftag
+            })
 
-    odds = {}
-    if modelos and time_stats:
+        # IA e Previsão
+        probs = {'Casa': 0.33, 'Empate': 0.33, 'Visitante': 0.33} # Padrão de segurança
         try:
-            odds = prever_jogo_especifico(
-                partida.home_team.nome, 
-                partida.away_team.nome, 
-                modelos, 
-                encoder, 
-                time_stats, 
-                colunas
-            )
+            dados_ia = carregar_ia() 
+            # Verifica se carregou tudo corretamente 
+            if dados_ia and len(dados_ia) == 4:
+                modelos, encoder, colunas, time_stats = dados_ia
+                resultado_ia = prever_jogo_especifico(
+                    partida.home_team.nome, 
+                    partida.away_team.nome, 
+                    modelos, encoder, time_stats, colunas
+                )
+                if resultado_ia:
+                    probs = resultado_ia
         except Exception as e:
-            logger.error(f"Erro na predição detalhada: {e}")
-            odds = {'Casa': 0.33, 'Empate': 0.33, 'Visitante': 0.33}
-    else:
-        odds = {'Casa': 0.33, 'Empate': 0.33, 'Visitante': 0.33}
+            print(f"Aviso: IA indisponível para o jogo {partida}. Erro: {e}")
 
-    # Dados históricos 
-    partidas_todas = Partida.objects.all().values('data', 'home_team__nome', 'away_team__nome', 'fthg', 'ftag')
-    df_total = pd.DataFrame(list(partidas_todas))
-    
-    if not df_total.empty:
-        df_total.columns = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG']
-        _, df_h2h = gerar_confronto_direto(df_total, partida.home_team.nome, partida.away_team.nome)
-        h2h_data = df_h2h.head(5).to_dict('records')
-    else:
-        h2h_data = []
+        # Forma Recente 
+        def get_ultimos(time):
+            jogos = Partida.objects.filter(
+                models.Q(home_team=time) | models.Q(away_team=time),
+                fthg__isnull=False,
+                data__year=2026 
+            ).order_by('-data')[:5]
+            
+            res = []
+            for j in jogos:
+                if j.fthg is None or j.ftag is None:
+                    continue
 
-    return JsonResponse({
-        'encerrado': partida.fthg is not None,
-        'home': partida.home_team.nome,
-        'away': partida.away_team.nome,
-        'placar_home': partida.fthg,
-        'placar_away': partida.ftag,
-        'forma_home': obter_ultimos_jogos(partida.home_team.nome),
-        'forma_away': obter_ultimos_jogos(partida.away_team.nome),
-        'prob_casa': f"{odds.get('Casa', 0):.0%}",
-        'prob_empate': f"{odds.get('Empate', 0):.0%}",
-        'prob_visitante': f"{odds.get('Visitante', 0):.0%}",
-        'h2h_lista': h2h_data,
-        'ESCUDOS': escudos
-    })
+                g_pro = j.fthg if j.home_team == time else j.ftag
+                g_con = j.ftag if j.home_team == time else j.fthg
+                
+                if g_pro > g_con: res.append('V')
+                elif g_pro == g_con: res.append('E')
+                else: res.append('D')
+            return res
+
+        # 4. Resposta JSON Completa
+        data = {
+            'id': partida.pk,
+            'home': partida.home_team.nome,
+            'away': partida.away_team.nome,
+            'encerrado': partida.fthg is not None,
+            'placar_home': partida.fthg,
+            'placar_away': partida.ftag,
+            'prob_casa': probs.get('Casa', 0.33),
+            'prob_empate': probs.get('Empate', 0.33),
+            'prob_visitante': probs.get('Visitante', 0.33),
+            'forma_home': get_ultimos(partida.home_team),
+            'forma_away': get_ultimos(partida.away_team),
+            'h2h_lista': h2h_lista
+        }
+        
+        return JsonResponse(data)
+        
+    except Exception as e:
+        print(f"Erro CRÍTICO no detalhes_confronto: {e}")
+        return JsonResponse({'error': str(e)}, status=500)
 
 def obter_ultimos_jogos(time_nome):
     """Retorna os últimos 5 resultados (V, E, D) de um time em 2026."""
@@ -275,3 +305,69 @@ def obter_ultimos_jogos(time_nome):
             ultimos.append('D')
             
     return ultimos[::-1]
+
+
+def forcar_atualizacao(request):
+    """
+    Rota que força o scraper a buscar dados e re-treinar a IA.
+    """
+    # Scraping
+    scraper = AtletiQScraper()
+    # Busca dados de 2026
+    dados_api = scraper.buscar_dados_hibrido(2026) 
+    
+    scraper.atualizar_artilharia(2026)
+    if dados_api is not None and not dados_api.empty:
+        # Salvar dados no banco (Implementar depois)
+        pass 
+
+    # Re-treino da IA
+    try:
+        # Reutiliza a função existente para pegar contexto
+        partidas_query = Partida.objects.filter(fthg__isnull=False).values(
+            'data', 'home_team__nome', 'away_team__nome', 'fthg', 'ftag', 'rodada'
+        )
+        
+        if partidas_query:
+            df_res = pd.DataFrame(list(partidas_query))
+            df_res.columns = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'Rodada']
+            
+            df_treino, time_stats = preparar_dados_para_modelo(df_res)
+            
+            if not df_treino.empty:
+                modelos, encoder, colunas = treinar_modelo(df_treino)
+                salvar_ia(modelos, encoder, colunas, time_stats)
+                messages.success(request, "Sistema atualizado e IA re-treinada com sucesso!")
+            else:
+                messages.warning(request, "Poucos dados para treinar a IA.")
+        else:
+            messages.error(request, "Nenhuma partida encerrada encontrada no banco.")
+
+    except Exception as e:
+        messages.error(request, f"Erro ao atualizar: {str(e)}")
+    
+    return redirect('classificacao')
+
+
+@csrf_exempt
+def votar_partida(request, partida_id):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        escolha = data.get('escolha') 
+        
+        if escolha in ['H', 'D', 'A']:
+            VotoPopular.objects.create(partida_id=partida_id, escolha=escolha)
+            
+            # Recalcula porcentagens
+            total = VotoPopular.objects.filter(partida_id=partida_id).count()
+            h = VotoPopular.objects.filter(partida_id=partida_id, escolha='H').count()
+            d = VotoPopular.objects.filter(partida_id=partida_id, escolha='D').count()
+            a = VotoPopular.objects.filter(partida_id=partida_id, escolha='A').count()
+            
+            return JsonResponse({
+                'total': total,
+                'H': int((h/total)*100),
+                'D': int((d/total)*100),
+                'A': int((a/total)*100)
+            })
+    return JsonResponse({'error': 'Invalid request'}, status=400)

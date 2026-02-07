@@ -106,3 +106,27 @@ class AtletiQScraper:
                 })
             return pd.DataFrame(scorers)
         except: return None
+
+    def atualizar_artilharia(self, season):
+        """Busca os top scorers da competição e salva no banco."""
+        url = f"{self.base_url}/competitions/BSA/scorers?season={season}"
+        try:
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Limpa tabela antiga para manter só os atuais
+            from predictions.models import Artilheiro
+            Artilheiro.objects.all().delete()
+            
+            for player in data.get('scorers', []):
+                Artilheiro.objects.create(
+                    nome=player['player']['name'],
+                    time=player['team']['name'],
+                    gols=player['goals'],
+                    assistencias=player.get('assists', 0)
+                )
+            print("Artilharia atualizada com sucesso!")
+            
+        except Exception as e:
+            print(f"Erro ao atualizar artilharia: {e}")
