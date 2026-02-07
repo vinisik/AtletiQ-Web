@@ -1,0 +1,8 @@
+Django>=5.0
+pandas
+numpy
+scikit-learn>=1.4.0  
+joblib               
+requests
+python-dotenv        
+tzdata
