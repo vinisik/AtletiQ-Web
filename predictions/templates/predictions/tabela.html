@@ -55,9 +55,9 @@
                 {% for time in tabela %}
                 <tr class="hover:bg-white/5 transition-colors group">
                     <td class="p-4 text-center font-black text-xs 
-                        {% if forloop.counter <= 5 %} border-l-4 border-[#00E676] text-[#00E676]
-                        {% elif forloop.counter <= 7 %} border-l-4 border-blue-500 text-blue-400
-                        {% elif forloop.counter <= 14 %} border-l-4 border-yellow-500 text-yellow-400
+                        {% if forloop.counter <= 4 %} border-l-4 border-[#00E676] text-[#00E676]
+                        {% elif forloop.counter == 5 %} border-l-4 border-blue-500 text-blue-400
+                        {% elif forloop.counter <= 11 %} border-l-4 border-yellow-500 text-yellow-400
                         {% elif forloop.counter >= 17 %} border-l-4 border-red-600 text-red-500
                         {% else %} border-l-4 border-transparent text-gray-500 {% endif %}">
                         {{ forloop.counter }}º
