@@ -10,7 +10,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         scraper = AtletiQScraper()
         # Definir as temporadas para sincronizar 
-        temporadas = [2026]
+        temporadas = [2023, 2024, 2025, 2026]
 
         for ano in temporadas:
             self.stdout.write(self.style.WARNING(f"Iniciando temporada {ano}..."))

@@ -16,6 +16,7 @@ from .ai_logic.predictor import prever_jogo_especifico, simular_campeonato
 from .ai_logic.feature_engineering import preparar_dados_para_modelo
 from .ai_logic.model_trainer import treinar_modelo, carregar_ia, salvar_ia
 from .ai_logic.analysis import gerar_confronto_direto
+from django.core.management import call_command
 
 logger = logging.getLogger('predictions')
 
@@ -309,44 +310,27 @@ def obter_ultimos_jogos(time_nome):
 
 def forcar_atualizacao(request):
     """
-    Rota que força o scraper a buscar dados e re-treinar a IA.
+    Aciona o comando de sincronização sync_data através do botão no header.
     """
-    # Scraping
-    scraper = AtletiQScraper()
-    # Busca dados de 2026
-    dados_api = scraper.buscar_dados_hibrido(2026) 
-    
-    scraper.atualizar_artilharia(2026)
-    if dados_api is not None and not dados_api.empty:
-        # Salvar dados no banco (Implementar depois)
-        pass 
-
-    # Re-treino da IA
     try:
-        # Reutiliza a função existente para pegar contexto
-        partidas_query = Partida.objects.filter(fthg__isnull=False).values(
-            'data', 'home_team__nome', 'away_team__nome', 'fthg', 'ftag', 'rodada'
-        )
+        # Chama o comando sync_data 
+        print("Iniciando sincronização via botão...")
+        call_command('sync_data')
         
-        if partidas_query:
-            df_res = pd.DataFrame(list(partidas_query))
-            df_res.columns = ['Date', 'HomeTeam', 'AwayTeam', 'FTHG', 'FTAG', 'Rodada']
-            
-            df_treino, time_stats = preparar_dados_para_modelo(df_res)
-            
-            if not df_treino.empty:
-                modelos, encoder, colunas = treinar_modelo(df_treino)
-                salvar_ia(modelos, encoder, colunas, time_stats)
-                messages.success(request, "Sistema atualizado e IA re-treinada com sucesso!")
-            else:
-                messages.warning(request, "Poucos dados para treinar a IA.")
+        # Após sincronizar os dados, atualiza a IA
+        modelos_dict, encoder, time_stats, colunas = obter_contexto_ia()
+        
+        if modelos_dict:
+            salvar_ia(modelos_dict, encoder, colunas, time_stats)
+            messages.success(request, "Sistema sincronizado com sucesso! (Dados + IA)")
         else:
-            messages.error(request, "Nenhuma partida encerrada encontrada no banco.")
+            messages.warning(request, "Dados sincronizados, mas IA não treinada (poucos jogos).")
 
     except Exception as e:
-        messages.error(request, f"Erro ao atualizar: {str(e)}")
+        logger.error(f"Erro na atualização via botão: {e}")
+        messages.error(request, f"Erro ao executar sync_data: {str(e)}")
     
-    return redirect('classificacao')
+    return redirect('calendario')
 
 
 @csrf_exempt
