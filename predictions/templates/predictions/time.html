@@ -29,10 +29,12 @@
                 </h3>
                 <ul class="space-y-3">
                     {% for titulo in titulos %}
-                    <li class="flex items-center gap-3 text-sm text-gray-300 border-b border-[#333] pb-2 last:border-0">
+                    <li class="flex items-center gap-3 text-sm text-gray-300 border-b border-[#333] pb-2 last:border-0 hover:bg-[#252525] p-2 rounded transition-colors">
                         <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
-                        {{ titulo }}
+                        <span class="font-bold text-white">{{ titulo.nome }}</span>
                     </li>
+                    {% empty %}
+                    <li class="text-gray-500 text-xs italic">Sem dados de títulos cadastrados.</li>
                     {% endfor %}
                 </ul>
             </div>

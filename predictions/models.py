@@ -19,6 +19,16 @@ class Partida(models.Model):
     def __str__(self):
         return f"R{self.rodada}: {self.home_team} x {self.away_team}"
     
+
+class Titulo(models.Model):
+    time = models.ForeignKey(Time, on_delete=models.CASCADE, related_name='titulos')
+    nome = models.CharField(max_length=100)  
+    ano = models.CharField(max_length=4)    
+    imagem = models.URLField(null=True, blank=True) 
+
+    def __str__(self):
+        return f"{self.nome} ({self.ano}) - {self.time.nome}"
+    
 class Artilheiro(models.Model):
     nome = models.CharField(max_length=100)
     time = models.CharField(max_length=100)

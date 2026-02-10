@@ -10,7 +10,7 @@ from .ai_logic.web_scraper import AtletiQScraper
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import VotoPopular, Partida
-from .models import Time, Partida
+from .models import Time, Partida, Titulo
 from django.db.models import Q, F, Sum, Max
 from .ai_logic.predictor import prever_jogo_especifico, simular_campeonato
 from .ai_logic.feature_engineering import preparar_dados_para_modelo
@@ -286,82 +286,86 @@ def detalhes_confronto(request, partida_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 def detalhes_time(request, time_id):
-    time = get_object_or_404(Time, pk=time_id)
+    time_obj = get_object_or_404(Time, pk=time_id)
     escudos = carregar_escudos_json()
     
-    # Últimos Jogos 
-    jogos_recentes = Partida.objects.filter(
-        (Q(home_team=time) | Q(away_team=time)),
-        fthg__isnull=False,
+    # Histórico Recente
+    jogos = Partida.objects.filter(
+        (Q(home_team=time_obj) | Q(away_team=time_obj)),
+        fthg__isnull=False, 
+        ftag__isnull=False,  
         data__year=2026
     ).order_by('-data')
     
-    # Processa histórico para exibição
-    historico_partidas = []
-    for jogo in jogos_recentes:
+    historico = []
+    for j in jogos:
+        if j.fthg is None or j.ftag is None:
+            continue
+
         res = 'E'
-        if jogo.fthg != jogo.ftag:
-            if (jogo.home_team == time and jogo.fthg > jogo.ftag) or \
-               (jogo.away_team == time and jogo.ftag > jogo.fthg):
-                res = 'V'
-            else:
-                res = 'D'
-        historico_partidas.append({
-            'jogo': jogo,
-            'resultado': res,
-            'adversario': jogo.away_team if jogo.home_team == time else jogo.home_team,
-            'placar': f"{int(jogo.fthg)} x {int(jogo.ftag)}"
+        if j.fthg != j.ftag:
+            venceu = (j.home_team == time_obj and j.fthg > j.ftag) or \
+                     (j.away_team == time_obj and j.ftag > j.fthg)
+            res = 'V' if venceu else 'D'
+        
+        adv = j.away_team if j.home_team == time_obj else j.home_team
+        historico.append({
+            'jogo': j, 
+            'resultado': res, 
+            'adversario': adv, 
+            'placar': f"{int(j.fthg)} x {int(j.ftag)}",
+            'mando': 'C' if j.home_team == time_obj else 'F'
         })
 
-    todas_partidas = Partida.objects.filter(data__year=2026, fthg__isnull=False).order_by('rodada')
-    df = pd.DataFrame(list(todas_partidas.values('rodada', 'home_team_id', 'away_team_id', 'fthg', 'ftag')))
+    # Gráfico Evolução 
+    ev_labels, ev_data = [], []
+    all_games = Partida.objects.filter(
+        data__year=2026, 
+        fthg__isnull=False, 
+        ftag__isnull=False
+    ).order_by('rodada')
     
-    evolucao_labels = []
-    evolucao_data = []
+    df = pd.DataFrame(list(all_games.values('rodada', 'home_team_id', 'away_team_id', 'fthg', 'ftag')))
     
     if not df.empty:
-        max_rodada = df['rodada'].max()
-        for r in range(1, max_rodada + 1):
-            jogos_ate_r = df[df['rodada'] <= r]
+        for r in range(1, int(df['rodada'].max()) + 1):
+            sub = df[df['rodada'] <= r]
+            pts = {}
+            # Inicializa todos
+            all_ids = set(df['home_team_id']).union(set(df['away_team_id']))
+            for t in all_ids: pts[t] = 0
             
-            # Recalcula tabela rápida
-            pontos = {}
-            # Inicializa todos os times com 0
-            todos_times_ids = set(df['home_team_id']).union(set(df['away_team_id']))
-            for t_id in todos_times_ids: pontos[t_id] = 0
-            
-            for _, row in jogos_ate_r.iterrows():
+            for _, row in sub.iterrows():
+                if pd.isna(row['fthg']) or pd.isna(row['ftag']):
+                    continue
+                    
                 h, a = row['home_team_id'], row['away_team_id']
                 hg, ag = row['fthg'], row['ftag']
-                if hg > ag: pontos[h] += 3
-                elif ag > hg: pontos[a] += 3
-                else:
-                    pontos[h] += 1
-                    pontos[a] += 1
+                
+                if hg > ag: pts[h] += 3
+                elif ag > hg: pts[a] += 3
+                else: pts[h]+=1; pts[a]+=1
             
-            # Ordena (Rank simples por pontos)
-            ranking = sorted(pontos.items(), key=lambda x: x[1], reverse=True)
-            
-            # Acha a posição do time atual
-            pos = next((i+1 for i, (tid, pts) in enumerate(ranking) if tid == time.id), None)
-            
+            rank = sorted(pts.items(), key=lambda x: x[1], reverse=True)
+            pos = next((i+1 for i, (tid, _) in enumerate(rank) if tid == time_obj.pk), None)
             if pos:
-                evolucao_labels.append(f"R{r}")
-                evolucao_data.append(pos)
+                ev_labels.append(f"R{r}")
+                ev_data.append(pos)
+
+    try:
+        titulos_reais = Titulo.objects.filter(time=time_obj)
+    except:
+        titulos_reais = []
 
     return render(request, 'predictions/time.html', {
-        'time': time,
-        'escudo': escudos.get(time.nome, ''),
-        'historico': historico_partidas,
-        'evolucao_labels': json.dumps(evolucao_labels),
-        'evolucao_data': json.dumps(evolucao_data),
-        # Títulos fictícios
-        'titulos': [
-            "Campeonato Brasileiro (Exemplo)", 
-            "Copa do Brasil (Exemplo)", 
-            "Libertadores (Exemplo)"
-        ] 
+        'time': time_obj, 
+        'escudo': escudos.get(time_obj.nome, ''), 
+        'historico': historico,
+        'evolucao_labels': json.dumps(ev_labels), 
+        'evolucao_data': json.dumps(ev_data),
+        'titulos': titulos_reais 
     })
+
 
 def obter_ultimos_jogos(time_nome):
     """Retorna os últimos 5 resultados (V, E, D) de um time em 2026."""
