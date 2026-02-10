@@ -16,14 +16,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Aqui no futuro passaremos os dados do views.py para JSON
     const ctx = document.getElementById('evolutionChart').getContext('2d');
     
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: Array.from({length: 38}, (_, i) => i + 1),
-            datasets: [] // Preencheremos com a lógica do views.py
+            datasets: [] 
         },
         options: {
             responsive: true,
