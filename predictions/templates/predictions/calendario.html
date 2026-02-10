@@ -152,6 +152,11 @@
             fetch(`/detalhes/${id}/`)
                 .then(res => res.json())
                 .then(data => {
+                    if (data.error) {
+                        if(content) content.innerHTML = `<p class="text-red-500 text-center p-4 text-xs">Erro: ${data.error}</p>`;
+                        return;
+                    }
+
                     const formatPct = (val) => {
                         const num = parseFloat(val);
                         return !isNaN(num) ? Math.round(num * 100) : 0;
@@ -161,7 +166,7 @@
                         `<div class="w-2 h-2 rounded-full ${r==='V'?'bg-[#00E676]':r==='E'?'bg-gray-500':'bg-red-500'}"></div>`
                     ).join('') : '';
 
-                    const h2hHtml = data.h2h_lista && data.h2h_lista.length > 0 ? data.h2h_lista.map(jogo => `
+                    const h2hHtml = (data.h2h_lista && data.h2h_lista.length > 0) ? data.h2h_lista.map(jogo => `
                         <div class="flex items-center justify-between text-[11px] py-3 border-b border-[#333] last:border-0 hover:bg-[#252525] px-2 rounded transition-colors">
                             <span class="text-gray-500 font-mono w-20 text-center">${jogo.Data ? new Date(jogo.Data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', year:'2-digit'}) : '--'}</span>
                             <div class="flex-1 flex justify-center items-center gap-3 font-bold">
@@ -190,24 +195,28 @@
                                 <div class="flex items-start justify-between mb-10 relative">
                                     <div class="absolute top-10 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#333] to-transparent z-0"></div>
 
-                                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center">
-                                        <div class="relative mb-3 group">
-                                            <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
-                                            <img src="${ESCUDOS_DATA[data.home] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
-                                        </div>
-                                        <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2">${data.home}</div>
+                                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center group">
+                                        ${data.home_id ? `<a href="/time/${data.home_id}/" class="contents" title="Ver estatísticas">` : ''}
+                                            <div class="relative mb-3">
+                                                <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
+                                                <img src="${ESCUDOS_DATA[data.home] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
+                                            </div>
+                                            <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2 group-hover:text-[#00E676] transition-colors">${data.home}</div>
+                                        ${data.home_id ? `</a>` : ''}
                                         <div class="flex gap-1.5 bg-[#121212] px-3 py-1.5 rounded-full border border-[#333]">${bolinhas(data.forma_home)}</div>
                                         <span class="text-[11px] text-gray-600 font-mono mt-1">Últimos Jogos</span>
                                     </div>
                                     
                                     <div class="w-1/3 flex justify-center pt-4 relative z-10">${infoCentral}</div>
                                     
-                                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center">
-                                        <div class="relative mb-3 group">
-                                            <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
-                                            <img src="${ESCUDOS_DATA[data.away] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
-                                        </div>
-                                        <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2">${data.away}</div>
+                                    <div class="text-center w-1/3 relative z-10 flex flex-col items-center group">
+                                        ${data.away_id ? `<a href="/time/${data.away_id}/" class="contents" title="Ver estatísticas">` : ''}
+                                            <div class="relative mb-3">
+                                                <div class="absolute inset-0 bg-[#00E676] blur-xl opacity-0 group-hover:opacity-20 transition-opacity rounded-full"></div>
+                                                <img src="${ESCUDOS_DATA[data.away] || ''}" class="w-20 h-20 object-contain drop-shadow-2xl relative z-10 transform group-hover:scale-110 transition-transform">
+                                            </div>
+                                            <div class="font-black text-white text-sm md:text-lg uppercase leading-tight mb-2 group-hover:text-[#00E676] transition-colors">${data.away}</div>
+                                        ${data.away_id ? `</a>` : ''}
                                         <div class="flex gap-1.5 bg-[#121212] px-3 py-1.5 rounded-full border border-[#333]">${bolinhas(data.forma_away)}</div>
                                         <span class="text-[11px] text-gray-600 font-mono mt-1">Últimos Jogos</span>
                                     </div>
@@ -237,7 +246,7 @@
                             <div class="mt-6 border-t border-[#333] pt-6">
                                 <h4 class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
                                     <svg class="w-4 h-4 text-[#00E676]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                                    Faça sua Votação
+                                    Voz da Torcida
                                 </h4>
                                 
                                 <div class="flex gap-3 mb-4" id="btnsVotacao">
@@ -256,7 +265,7 @@
 
                             <div class="mt-8">
                                 <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    Histórico Recente (2023-2026)
+                                    Histórico Recente (H2H)
                                 </h4>
                                 <div class="bg-[#121212] rounded-2xl p-2 border border-[#333] max-h-40 overflow-y-auto custom-scrollbar">
                                     ${h2hHtml}
@@ -267,7 +276,7 @@
                 })
                 .catch(error => {
                     console.error('Erro:', error);
-                    if(content) content.innerHTML = `<p class="text-red-500 text-center p-4 text-xs">Erro ao carregar. Tente novamente.</p>`;
+                    if(content) content.innerHTML = `<p class="text-red-500 text-center p-4 text-xs">Erro ao carregar dados.</p>`;
                 });
         };
 

@@ -261,11 +261,13 @@ def detalhes_confronto(request, partida_id):
                 else: res.append('D')
             return res
 
-        # 4. Resposta JSON Completa
+        # Resposta JSON 
         data = {
             'id': partida.pk,
             'home': partida.home_team.nome,
             'away': partida.away_team.nome,
+            'home_id': partida.home_team.pk,   
+            'away_id': partida.away_team.pk,
             'encerrado': partida.fthg is not None,
             'placar_home': partida.fthg,
             'placar_away': partida.ftag,
@@ -282,6 +284,84 @@ def detalhes_confronto(request, partida_id):
     except Exception as e:
         print(f"Erro CRÍTICO no detalhes_confronto: {e}")
         return JsonResponse({'error': str(e)}, status=500)
+
+def detalhes_time(request, time_id):
+    time = get_object_or_404(Time, pk=time_id)
+    escudos = carregar_escudos_json()
+    
+    # Últimos Jogos 
+    jogos_recentes = Partida.objects.filter(
+        (Q(home_team=time) | Q(away_team=time)),
+        fthg__isnull=False,
+        data__year=2026
+    ).order_by('-data')
+    
+    # Processa histórico para exibição
+    historico_partidas = []
+    for jogo in jogos_recentes:
+        res = 'E'
+        if jogo.fthg != jogo.ftag:
+            if (jogo.home_team == time and jogo.fthg > jogo.ftag) or \
+               (jogo.away_team == time and jogo.ftag > jogo.fthg):
+                res = 'V'
+            else:
+                res = 'D'
+        historico_partidas.append({
+            'jogo': jogo,
+            'resultado': res,
+            'adversario': jogo.away_team if jogo.home_team == time else jogo.home_team,
+            'placar': f"{int(jogo.fthg)} x {int(jogo.ftag)}"
+        })
+
+    todas_partidas = Partida.objects.filter(data__year=2026, fthg__isnull=False).order_by('rodada')
+    df = pd.DataFrame(list(todas_partidas.values('rodada', 'home_team_id', 'away_team_id', 'fthg', 'ftag')))
+    
+    evolucao_labels = []
+    evolucao_data = []
+    
+    if not df.empty:
+        max_rodada = df['rodada'].max()
+        for r in range(1, max_rodada + 1):
+            jogos_ate_r = df[df['rodada'] <= r]
+            
+            # Recalcula tabela rápida
+            pontos = {}
+            # Inicializa todos os times com 0
+            todos_times_ids = set(df['home_team_id']).union(set(df['away_team_id']))
+            for t_id in todos_times_ids: pontos[t_id] = 0
+            
+            for _, row in jogos_ate_r.iterrows():
+                h, a = row['home_team_id'], row['away_team_id']
+                hg, ag = row['fthg'], row['ftag']
+                if hg > ag: pontos[h] += 3
+                elif ag > hg: pontos[a] += 3
+                else:
+                    pontos[h] += 1
+                    pontos[a] += 1
+            
+            # Ordena (Rank simples por pontos)
+            ranking = sorted(pontos.items(), key=lambda x: x[1], reverse=True)
+            
+            # Acha a posição do time atual
+            pos = next((i+1 for i, (tid, pts) in enumerate(ranking) if tid == time.id), None)
+            
+            if pos:
+                evolucao_labels.append(f"R{r}")
+                evolucao_data.append(pos)
+
+    return render(request, 'predictions/time.html', {
+        'time': time,
+        'escudo': escudos.get(time.nome, ''),
+        'historico': historico_partidas,
+        'evolucao_labels': json.dumps(evolucao_labels),
+        'evolucao_data': json.dumps(evolucao_data),
+        # Títulos fictícios
+        'titulos': [
+            "Campeonato Brasileiro (Exemplo)", 
+            "Copa do Brasil (Exemplo)", 
+            "Libertadores (Exemplo)"
+        ] 
+    })
 
 def obter_ultimos_jogos(time_nome):
     """Retorna os últimos 5 resultados (V, E, D) de um time em 2026."""

@@ -10,4 +10,5 @@ urlpatterns = [
     path('simulacao/', views.simulacao, name='simulacao'),
     path('atualizar-sistema/', forcar_atualizacao, name='atualizar_sistema'),
     path('votar/<int:partida_id>/', views.votar_partida, name='votar_partida'),
+    path('time/<int:time_id>/', views.detalhes_time, name='detalhes_time'),
 ]

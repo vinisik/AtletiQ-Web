@@ -1,0 +1,130 @@
+{% extends "predictions/base.html" %}
+
+{% block content %}
+<div class="px-4 animate-fadeIn mt-6">
+    
+    <div class="flex flex-col md:flex-row items-center gap-6 mb-10 bg-[#1E1E1E] p-8 rounded-3xl border border-[#333] shadow-2xl relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-[#00E676]/5 to-transparent"></div>
+        
+        <img src="{{ escudo }}" class="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl relative z-10">
+        
+        <div class="text-center md:text-left relative z-10">
+            <h2 class="text-white text-3xl md:text-5xl font-black tracking-tighter uppercase mb-2">
+                {{ time.nome }}
+            </h2>
+            <div class="flex items-center justify-center md:justify-start gap-3">
+                <span class="px-3 py-1 rounded bg-[#00E676] text-black font-bold text-xs uppercase tracking-widest">Série A</span>
+                <span class="px-3 py-1 rounded bg-[#333] text-gray-300 font-bold text-xs uppercase tracking-widest">Brasil</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+        
+        <div class="md:col-span-4 space-y-6">
+            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333]">
+                <h3 class="text-[#00E676] text-lg font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+                    Principais Títulos
+                </h3>
+                <ul class="space-y-3">
+                    {% for titulo in titulos %}
+                    <li class="flex items-center gap-3 text-sm text-gray-300 border-b border-[#333] pb-2 last:border-0">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                        {{ titulo }}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333]">
+                <h3 class="text-gray-400 text-xs font-black uppercase tracking-widest mb-4">Últimas Partidas</h3>
+                <div class="space-y-4">
+                    {% for item in historico %}
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded flex items-center justify-center font-bold text-xs 
+                                {% if item.resultado == 'V' %}bg-[#00E676] text-black
+                                {% elif item.resultado == 'E' %}bg-gray-600 text-white
+                                {% else %}bg-red-500 text-white{% endif %}">
+                                {{ item.resultado }}
+                            </span>
+                            <span class="text-gray-300">{{ item.adversario.nome }}</span>
+                        </div>
+                        <span class="font-mono text-white font-bold">{{ item.placar }}</span>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-600 text-xs italic">Nenhum jogo recente.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="md:col-span-8">
+            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333] h-[400px] md:h-[500px] relative">
+                <h3 class="text-white text-lg font-black uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-[#00E676]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    Evolução no Campeonato
+                </h3>
+                <div class="absolute inset-0 pt-20 pb-4 px-4">
+                    <canvas id="chartEvolucao"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('chartEvolucao').getContext('2d');
+        const labels = JSON.parse('{{ evolucao_labels|safe }}');
+        const data = JSON.parse('{{ evolucao_data|safe }}');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Posição',
+                    data: data,
+                    borderColor: '#00E676',
+                    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#121212',
+                    pointBorderColor: '#00E676',
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        reverse: true, // 1º lugar no topo
+                        min: 1,
+                        max: 20,
+                        grid: { color: '#333' },
+                        ticks: { color: '#666', stepSize: 1 }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#666' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#000',
+                        titleColor: '#00E676',
+                        bodyColor: '#fff',
+                        displayColors: false
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
