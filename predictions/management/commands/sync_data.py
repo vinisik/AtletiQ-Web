@@ -48,7 +48,7 @@ class Command(BaseCommand):
                 'São Paulo': ['Mundial (1992, 1993, 2005)', 'Libertadores (1992, 1993, 2005)', 'Brasileirão (6x)'],
                 'Corinthians': ['Mundial (2000, 2012)', 'Libertadores (2012)', 'Brasileirão (7x)', 'Copa do Brasil (3x)'],
                 'Santos': ['Mundial (1962, 1963)', 'Libertadores (1962, 1963, 2011)', 'Brasileirão (8x)'],
-                'Grêmio': ['Mundial (1983)', 'Libertadores (1983, 1995, 2017)', 'Brasileirão (2x)', 'Copa do Brasil (5x)'],
+                'Grêmio': ['Mundial (1983)', 'Libertadores (1983, 1995, 2017)', 'Brasileirão (1981, 1996)', 'Copa do Brasil (1989, 1994, 1997, 2001, 2016)'],
                 'Internacional': ['Mundial (2006)', 'Libertadores (2006, 2010)', 'Brasileirão (3x)', 'Copa do Brasil (1x)'],
                 'Cruzeiro': ['Libertadores (1976, 1997)', 'Brasileirão (4x)', 'Copa do Brasil (6x)'],
                 'Atlético-MG': ['Libertadores (2013)', 'Brasileirão (3x)', 'Copa do Brasil (2x)'],

@@ -317,6 +317,22 @@ def detalhes_time(request, time_id):
             'mando': 'C' if j.home_team == time_obj else 'F'
         })
 
+    jogos_futuros = Partida.objects.filter(
+        (Q(home_team=time_obj) | Q(away_team=time_obj)),
+        fthg__isnull=True, 
+        data__year=2026
+    ).order_by('data')[:5] # Pega os 5 próximos
+
+    proximos = []
+    for j in jogos_futuros:
+        adv = j.away_team if j.home_team == time_obj else j.home_team
+        proximos.append({
+            'data': j.data,
+            'adversario': adv,
+            'mando': 'C' if j.home_team == time_obj else 'F',
+            'rodada': j.rodada
+        })
+
     # Gráfico Evolução 
     ev_labels, ev_data = [], []
     all_games = Partida.objects.filter(
@@ -361,6 +377,7 @@ def detalhes_time(request, time_id):
         'time': time_obj, 
         'escudo': escudos.get(time_obj.nome, ''), 
         'historico': historico,
+        'proximos': proximos,
         'evolucao_labels': json.dumps(ev_labels), 
         'evolucao_data': json.dumps(ev_data),
         'titulos': titulos_reais 

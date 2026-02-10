@@ -1,9 +1,10 @@
 {% extends "predictions/base.html" %}
+{% load custom_filters %}
 
 {% block content %}
 <div class="px-4 animate-fadeIn mt-6">
     
-    <div class="flex flex-col md:flex-row items-center gap-6 mb-10 bg-[#1E1E1E] p-8 rounded-3xl border border-[#333] shadow-2xl relative overflow-hidden">
+    <div class="flex flex-col md:flex-row items-center gap-6 mb-6 bg-[#1E1E1E] p-8 rounded-3xl border border-[#333] relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-[#00E676]/5 to-transparent"></div>
         
         <img src="{{ escudo }}" class="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl relative z-10">
@@ -19,51 +20,87 @@
         </div>
     </div>
 
+    <div class="bg-[#1E1E1E] p-6 rounded-3xl border border-[#333] mb-6 relative overflow-hidden">
+        <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+            <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+        </div>
+        
+        <h3 class="text-[#00E676] text-lg font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+            Principais Títulos
+        </h3>
+        
+        <ul class="flex flex-wrap gap-3 relative z-10">
+            {% for titulo in titulos %}
+            <li class="flex items-center gap-3 text-sm text-gray-300 bg-[#252525] px-4 py-3 rounded-xl border border-[#333] hover:border-[#00E676] hover:text-white transition-all duration-300 group cursor-default">
+                <span class="w-2 h-2 rounded-full bg-yellow-500 group-hover:scale-125 transition-transform"></span>
+                <span class="font-bold">{{ titulo.nome }}</span>
+            </li>
+            {% empty %}
+            <li class="text-gray-500 text-sm italic w-full text-center py-2">Nenhum título registrado no sistema.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
         
         <div class="md:col-span-4 space-y-6">
+            
             <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333]">
-                <h3 class="text-[#00E676] text-lg font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-                    Principais Títulos
+                <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[#00E676]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Próximos Jogos
                 </h3>
-                <ul class="space-y-3">
-                    {% for titulo in titulos %}
-                    <li class="flex items-center gap-3 text-sm text-gray-300 border-b border-[#333] pb-2 last:border-0 hover:bg-[#252525] p-2 rounded transition-colors">
-                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
-                        <span class="font-bold text-white">{{ titulo.nome }}</span>
-                    </li>
+                <div class="space-y-3">
+                    {% for p in proximos %}
+                    <div class="flex items-center justify-between text-sm bg-[#252525] p-3 rounded-xl border border-[#333] hover:border-[#00E676] transition-colors group">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-gray-500 font-mono mb-1">{{ p.data|date:"d/m • H:i" }}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-gray-400 w-4">{{ p.mando }}</span>
+                                <span class="text-white font-bold group-hover:text-[#00E676] transition-colors truncate max-w-[120px]">{{ p.adversario.nome }}</span>
+                            </div>
+                        </div>
+                        <span class="text-[9px] bg-[#333] px-2 py-1 rounded text-gray-400 font-mono border border-[#444]">{{ p.rodada }}ª Rodada</span>
+                    </div>
                     {% empty %}
-                    <li class="text-gray-500 text-xs italic">Sem dados de títulos cadastrados.</li>
+                    <div class="text-center py-6 border-2 border-dashed border-[#333] rounded-xl">
+                        <p class="text-gray-600 text-xs italic">Sem jogos agendados.</p>
+                    </div>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
 
             <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333]">
                 <h3 class="text-gray-400 text-xs font-black uppercase tracking-widest mb-4">Últimas Partidas</h3>
                 <div class="space-y-4">
                     {% for item in historico %}
-                    <div class="flex items-center justify-between text-sm">
-                        <div class="flex items-center gap-2">
-                            <span class="w-6 h-6 rounded flex items-center justify-center font-bold text-xs 
+                    <div class="flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 rounded transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]
                                 {% if item.resultado == 'V' %}bg-[#00E676] text-black
                                 {% elif item.resultado == 'E' %}bg-gray-600 text-white
                                 {% else %}bg-red-500 text-white{% endif %}">
                                 {{ item.resultado }}
                             </span>
-                            <span class="text-gray-300">{{ item.adversario.nome }}</span>
+                            <div class="flex flex-col">
+                                <span class="text-gray-300 font-bold text-xs group-hover:text-white transition-colors">{{ item.adversario.nome }}</span>
+                                <span class="text-[9px] text-gray-600 font-mono">Mando: {{ item.mando }}</span>
+                            </div>
                         </div>
-                        <span class="font-mono text-white font-bold">{{ item.placar }}</span>
+                        <span class="font-mono text-white font-bold bg-[#121212] px-2 py-1 rounded border border-[#333] text-xs shadow-inner">
+                            {{ item.placar }}
+                        </span>
                     </div>
                     {% empty %}
-                    <p class="text-gray-600 text-xs italic">Nenhum jogo recente.</p>
+                    <p class="text-gray-600 text-xs italic text-center py-4">Nenhum jogo recente.</p>
                     {% endfor %}
                 </div>
             </div>
         </div>
 
         <div class="md:col-span-8">
-            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333] h-[400px] md:h-[500px] relative">
+            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333] h-[500px] relative shadow-lg">
                 <h3 class="text-white text-lg font-black uppercase tracking-widest mb-6 flex items-center gap-2">
                     <svg class="w-5 h-5 text-[#00E676]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                     Evolução no Campeonato
@@ -83,6 +120,15 @@
         const labels = JSON.parse('{{ evolucao_labels|safe }}');
         const data = JSON.parse('{{ evolucao_data|safe }}');
 
+        // Se não houver dados, mostra mensagem
+        if(labels.length === 0) {
+            ctx.font = "14px Inter";
+            ctx.fillStyle = "#666";
+            ctx.textAlign = "center";
+            ctx.fillText("Sem dados de evolução disponíveis ainda.", ctx.canvas.width/2, ctx.canvas.height/2);
+            return;
+        }
+
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -91,11 +137,18 @@
                     label: 'Posição',
                     data: data,
                     borderColor: '#00E676',
-                    backgroundColor: 'rgba(0, 230, 118, 0.1)',
+                    backgroundColor: (context) => {
+                        const ctx = context.chart.ctx;
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                        gradient.addColorStop(0, 'rgba(0, 230, 118, 0.2)');
+                        gradient.addColorStop(1, 'rgba(0, 230, 118, 0)');
+                        return gradient;
+                    },
                     borderWidth: 3,
                     pointBackgroundColor: '#121212',
                     pointBorderColor: '#00E676',
                     pointRadius: 4,
+                    pointHoverRadius: 6,
                     fill: true,
                     tension: 0.3
                 }]
@@ -108,12 +161,12 @@
                         reverse: true, // 1º lugar no topo
                         min: 1,
                         max: 20,
-                        grid: { color: '#333' },
-                        ticks: { color: '#666', stepSize: 1 }
+                        grid: { color: '#333', drawBorder: false },
+                        ticks: { color: '#666', stepSize: 1, font: {family: 'Inter'} }
                     },
                     x: {
                         grid: { display: false },
-                        ticks: { color: '#666' }
+                        ticks: { color: '#666', font: {family: 'Inter'} }
                     }
                 },
                 plugins: {
@@ -122,7 +175,15 @@
                         backgroundColor: '#000',
                         titleColor: '#00E676',
                         bodyColor: '#fff',
-                        displayColors: false
+                        borderColor: '#333',
+                        borderWidth: 1,
+                        displayColors: false,
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return context.raw + 'º Lugar';
+                            }
+                        }
                     }
                 }
             }
