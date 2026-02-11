@@ -45,6 +45,33 @@
     <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
         
         <div class="md:col-span-4 space-y-6">
+
+            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333]">
+                <h3 class="text-gray-400 text-xs font-black uppercase tracking-widest mb-4">Últimos Jogos</h3>
+                <div class="space-y-4">
+                    {% for item in historico %}
+                    <div class="flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 rounded transition-colors">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]
+                                {% if item.resultado == 'V' %}bg-[#00E676] text-black
+                                {% elif item.resultado == 'E' %}bg-gray-600 text-white
+                                {% else %}bg-red-500 text-white{% endif %}">
+                                {{ item.resultado }}
+                            </span>
+                            <div class="flex flex-col">
+                                <span class="text-gray-300 font-bold text-xs group-hover:text-white transition-colors">{{ item.adversario.nome }}</span>
+                                <span class="text-[9px] text-gray-600 font-mono">Mando: {{ item.mando }}</span>
+                            </div>
+                        </div>
+                        <span class="font-mono text-white font-bold bg-[#121212] px-2 py-1 rounded border border-[#333] text-xs shadow-inner">
+                            {{ item.placar }}
+                        </span>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-600 text-xs italic text-center py-4">Nenhum jogo recente.</p>
+                    {% endfor %}
+                </div>
+            </div>
             
             <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333]">
                 <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -71,32 +98,7 @@
                 </div>
             </div>
 
-            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333]">
-                <h3 class="text-gray-400 text-xs font-black uppercase tracking-widest mb-4">Últimas Partidas</h3>
-                <div class="space-y-4">
-                    {% for item in historico %}
-                    <div class="flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 rounded transition-colors">
-                        <div class="flex items-center gap-3">
-                            <span class="w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px]
-                                {% if item.resultado == 'V' %}bg-[#00E676] text-black
-                                {% elif item.resultado == 'E' %}bg-gray-600 text-white
-                                {% else %}bg-red-500 text-white{% endif %}">
-                                {{ item.resultado }}
-                            </span>
-                            <div class="flex flex-col">
-                                <span class="text-gray-300 font-bold text-xs group-hover:text-white transition-colors">{{ item.adversario.nome }}</span>
-                                <span class="text-[9px] text-gray-600 font-mono">Mando: {{ item.mando }}</span>
-                            </div>
-                        </div>
-                        <span class="font-mono text-white font-bold bg-[#121212] px-2 py-1 rounded border border-[#333] text-xs shadow-inner">
-                            {{ item.placar }}
-                        </span>
-                    </div>
-                    {% empty %}
-                    <p class="text-gray-600 text-xs italic text-center py-4">Nenhum jogo recente.</p>
-                    {% endfor %}
-                </div>
-            </div>
+            
         </div>
 
         <div class="md:col-span-8">

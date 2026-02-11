@@ -92,6 +92,7 @@ def classificacao(request):
         ultimos = obter_ultimos_jogos(time.nome)
 
         tabela.append({
+            'id': time.pk,
             'nome': time.nome,
             'p': pontos,
             'j': total_jogos,
