@@ -32,9 +32,11 @@
                 {% load static %}
                 <img src="{% static 'img/logo.png' %}" alt="Logo" class="w-8 h-8 md:w-10 md:h-10 object-contain">
                 
-                <h1 class="text-white text-xl md:text-3xl font-black tracking-tighter uppercase italic">
-                    AtletiQ <span class="text-[#00E676]">Web</span>
-                </h1>
+                <a href="{% url 'calendario' %}">
+                    <h1 class="text-white text-xl md:text-3xl font-black tracking-tighter uppercase italic">
+                        AtletiQ <span class="text-[#00E676]">Web</span>
+                 </h1>
+                </a>
             </div>
 
             <nav class="hidden md:flex h-full items-center gap-8">
