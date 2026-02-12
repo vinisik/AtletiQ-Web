@@ -38,13 +38,13 @@
         
         <h3 class="text-[#00E676] text-lg font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-            Sala de Troféus
+            Principais Títulos
         </h3>
         
         <ul class="flex flex-wrap gap-3 relative z-10">
             {% for titulo in titulos %}
             <li class="flex items-center gap-3 text-sm text-gray-300 bg-[#252525] px-4 py-3 rounded-xl border border-[#333] hover:border-[#00E676] hover:text-white transition-all duration-300 group cursor-default shadow-md">
-                <span class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_8px_gold] group-hover:scale-125 transition-transform"></span>
+                <span class="w-2 h-2 rounded-full bg-yellow-500 group-hover:scale-125 transition-transform"></span>
                 <span class="font-bold">{{ titulo.nome }}</span>
             </li>
             {% empty %}
