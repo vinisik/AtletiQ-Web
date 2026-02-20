@@ -8,7 +8,7 @@
         <h2 class="text-[#00E676] text-3xl md:text-4xl font-black tracking-tighter uppercase">Calendário 2026</h2>
     </div>
 
-    <div class="w-full mx-auto flex items-center justify-between mb-10 p-4 rounded-xl border border-[#333] relative overflow-hidden group-nav">
+    <div class="w-full mx-auto flex items-center justify-between mb-10 p-4 rounded-md border border-[#333] relative overflow-hidden group-nav">
         <div class="absolute inset-0 bg-gradient-to-r from-[#00E676]/5 via-transparent to-[#00E676]/5 opacity-0 group-nav-hover:opacity-100 transition-opacity"></div>
 
         {% if anterior %}
@@ -52,60 +52,74 @@
         {% endif %}
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-12">
+    {% comment %} Jogos {% endcomment %}
+    <div class="mb-12">
         {% for jogo in jogos %}
-        <div onclick="abrirModal('{{ jogo.id }}')" 
-             class="bg-[#1E1E1E] p-5 rounded-2xl border border-[#333333] cursor-pointer hover:border-[#00E676] transition-all duration-300 group shadow-lg relative overflow-hidden">
             
-            <div class="absolute top-0 left-0 w-1 h-full bg-[#00E676] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
-
-            <div class="flex justify-between items-center mb-5 text-[10px] font-mono text-gray-500 uppercase tracking-widest border-b border-[#333] pb-3">
-                <span class="flex items-center gap-2">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    {{ jogo.data|date:"d/m • H:i" }}
-                </span>
-                <span class="px-2 py-0.5 rounded text-[9px] font-bold border {% if jogo.fthg is not None %}bg-[#222] border-[#444] text-gray-400{% else %}bg-[#00E676]/10 border-[#00E676]/30 text-[#00E676]{% endif %}">
-                    {% if jogo.fthg is not None %}ENCERRADO{% else %}AGENDADO{% endif %}
-                </span>
-            </div>
-
-            <div class="flex items-center justify-between gap-2">
-                <div class="flex-1 flex flex-col items-center md:flex-row md:items-center md:justify-end gap-3 text-center md:text-right">
-                    <span class="font-bold text-sm md:text-base text-white leading-tight order-2 md:order-1">{{ jogo.home_team.nome }}</span>
-                    <img src="{{ ESCUDOS|dict_get:jogo.home_team.nome }}" class="w-10 h-10 object-contain drop-shadow-md order-1 md:order-2">
+            {% ifchanged jogo.data.date %}
+                
+                {% if not forloop.first %}
+                    </div> 
+                {% endif %}
+                
+                <div class="flex items-end justify-between border-b-2 border-[#333] pb-2 mb-4 {% if not forloop.first %}mt-10{% endif %}">
+                    <h3 class="text-white text-xl font-black uppercase tracking-widest">{{ jogo.data|date:"l" }}</h3>
+                    <span class="text-gray-400 font-mono text-sm tracking-widest">{{ jogo.data|date:"d/m/Y"|lower }}</span>
                 </div>
                 
-                <div class="shrink-0 mx-2 bg-[#121212] w-16 h-10 flex items-center justify-center rounded-lg border border-[#333] font-black text-lg text-white shadow-inner">
-                    {% if jogo.fthg is not None %}
-                        {{ jogo.fthg|floatformat:0 }}<span class="text-gray-600 mx-0.5 text-xs font-normal">:</span>{{ jogo.ftag|floatformat:0 }}
-                    {% else %}
-                        <span class="text-gray-600 text-xs">x</span>
-                    {% endif %}
+                <div class="grid grid-cols-1 lg:grid-cols-1 gap-3">
+            {% endifchanged %}
+
+            <div onclick="abrirModal('{{ jogo.id }}')" 
+                 class="bg-[#1E1E1E] p-5 rounded-sm border border-[#333333] cursor-pointer hover:border-[#00E676] transition-all duration-300 group shadow-lg relative overflow-hidden">
+                
+                <div class="absolute top-0 left-0 w-1 h-full bg-[#00E676] transform -translate-x-full group-hover:translate-x-0 transition-transform duration-300"></div>
+
+                <div class="flex justify-between items-center mb-5 text-[10px] font-mono text-gray-500 uppercase tracking-widest border-b border-[#333] pb-3">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        {{ jogo.data|date:"H:i" }}
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[9px] font-bold border {% if jogo.fthg is not None %}bg-[#222] border-[#444] text-gray-400{% else %}bg-[#00E676]/10 border-[#00E676]/30 text-[#00E676]{% endif %}">
+                        {% if jogo.fthg is not None %}ENCERRADO{% else %}AGENDADO{% endif %}
+                    </span>
                 </div>
 
-                <div class="flex-1 flex flex-col items-center md:flex-row md:items-center md:justify-start gap-3 text-center md:text-left">
-                    <img src="{{ ESCUDOS|dict_get:jogo.away_team.nome }}" class="w-10 h-10 object-contain drop-shadow-md">
-                    <span class="font-bold text-sm md:text-base text-white leading-tight">{{ jogo.away_team.nome }}</span>
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex-1 flex flex-col items-center md:flex-row md:items-center md:justify-end gap-3 text-center md:text-right">
+                        <span class="font-bold text-sm md:text-base text-white leading-tight order-2 md:order-1">{{ jogo.home_team.nome }}</span>
+                        <img src="{{ ESCUDOS|dict_get:jogo.home_team.nome }}" class="w-10 h-10 object-contain drop-shadow-md order-1 md:order-2">
+                    </div>
+                    
+                    <div class="shrink-0 mx-2 bg-[#121212] w-16 h-10 flex items-center justify-center rounded-lg border border-[#333] font-black text-lg text-white shadow-inner">
+                        {% if jogo.fthg is not None %}
+                            {{ jogo.fthg|floatformat:0 }}<span class="text-gray-600 mx-0.5 text-xs font-normal">:</span>{{ jogo.ftag|floatformat:0 }}
+                        {% else %}
+                            <span class="text-gray-600 text-xs">x</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex-1 flex flex-col items-center md:flex-row md:items-center md:justify-start gap-3 text-center md:text-left">
+                        <img src="{{ ESCUDOS|dict_get:jogo.away_team.nome }}" class="w-10 h-10 object-contain drop-shadow-md">
+                        <span class="font-bold text-sm md:text-base text-white leading-tight">{{ jogo.away_team.nome }}</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="mt-4 pt-3 border-t border-[#333]/50 text-center">
-                <span class="inline-flex items-center gap-2 text-[10px] uppercase tracking-widest text-[#00E676] font-bold opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">
-                    Ver Análise
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-                </span>
-            </div>
-        </div>
+            {% if forloop.last %}
+                </div> 
+            {% endif %}
+
         {% empty %}
-        <div class="col-span-full py-16 text-center border-2 border-dashed border-[#333] rounded-3xl bg-[#121212]/50">
-            <p class="text-gray-400 font-bold text-lg">Sem jogos nesta rodada</p>
-        </div>
+            <div class="py-16 text-center border-2 border-dashed border-[#333] rounded-3xl bg-[#121212]/50">
+                <p class="text-gray-400 font-bold text-lg">Sem jogos nesta rodada</p>
+            </div>
         {% endfor %}
     </div>
 </div>
 
 <div id="modalIA" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-50 backdrop-blur-md" style="display: none;">
-    <div class="bg-[#1E1E1E] w-full max-w-xl rounded-[2rem] border border-[#444] overflow-hidden shadow-2xl relative animate-fadeInUp" onclick="event.stopPropagation()">
+    <div class="bg-[#1E1E1E] w-full max-w-xl rounded-md border border-[#444] overflow-hidden shadow-2xl relative animate-fadeInUp" onclick="event.stopPropagation()">
         <div class="p-4 border-b border-[#333] flex justify-between items-center bg-[#181818]">
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-[#00E676] animate-pulse"></span>
@@ -178,12 +192,12 @@
                     `).join('') : '<p class="text-gray-500 text-center text-xs py-4 italic">Sem histórico recente.</p>';
 
                     const infoCentral = data.encerrado 
-                        ? `<div class="flex flex-col items-center"><div class="px-6 py-2 rounded-2xl border border-[#333] bg-[#121212] text-4xl font-black text-[#00E676] tracking-widest shadow-lg">${data.placar_home}-${data.placar_away}</div><span class="text-[9px] text-gray-500 uppercase mt-2 font-bold tracking-widest">Finalizado</span></div>`
+                        ? `<div class="flex flex-col items-center"><div class="px-6 py-2 rounded-2xl bg-[#121212] text-4xl font-black text-[#00E676] tracking-widest">${data.placar_home}-${data.placar_away}</div><span class="text-[9px] text-gray-500 uppercase mt-2 font-bold tracking-widest">Finalizado</span></div>`
                         : `<div class="flex flex-col items-center gap-1"><div class="text-gray-700 font-black text-4xl uppercase select-none">VS</div><span class="text-[9px] text-[#00E676] bg-[#00E676]/10 px-2 py-1 rounded border border-[#00E676]/20 uppercase font-bold tracking-widest">Em Breve</span></div>`;
 
                     if(content) {
                         content.innerHTML = `
-                            <div id="shareCard" class="bg-[#1E1E1E] p-4 rounded-xl border border-[#333]/50">
+                            <div id="shareCard" class="bg-[#1E1E1E] p-4 rounded-md">
                                 <div class="flex items-center justify-between mb-4">
                                      <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Brasileirão 2026</span>
                                      <div class="flex items-center gap-1">
@@ -222,8 +236,7 @@
                                     </div>
                                 </div>
                                 
-                                <div class="bg-[#181818] rounded-2xl p-5 border border-[#333] mb-4 relative overflow-hidden">
-                                    <div class="absolute top-0 right-0 p-2 opacity-10"><svg class="w-16 h-16 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1010 10A10 10 0 0012 2zm0 18a8 8 0 118-8 8 8 0 01-8 8z"></path></svg></div>
+                                <div class="bg-[#181818] rounded-md p-5 border border-[#333] mb-4 relative overflow-hidden">
                                     <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
                                         Probabilidades Calculadas
                                     </h4>
@@ -233,8 +246,8 @@
                                             <div class="bg-[#00E676]/10 border border-[#00E676]/30 rounded-b-lg p-3 text-[#00E676] font-black text-2xl">${formatPct(data.prob_casa)}%</div>
                                         </div>
                                         <div class="text-center">
-                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Empate</div>
-                                            <div class="bg-[#222] border border-[#333] rounded-b-lg p-3 text-gray-300 font-black text-2xl">${formatPct(data.prob_empate)}%</div>
+                                            <div class="bg-[#121212] rounded-t-md border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Empate</div>
+                                            <div class="bg-[#222] border border-[#333] rounded-b-md p-3 text-gray-300 font-black text-2xl">${formatPct(data.prob_empate)}%</div>
                                         </div>
                                         <div class="text-center">
                                             <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Fora</div>

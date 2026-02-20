@@ -15,7 +15,7 @@
         <h3 class="text-white text-sm font-black uppercase tracking-widest decoration-[#00E676] underline-offset-4 decoration-2 transition-all">Calendário</h3>
     </div>
 </a>
-    <div class="flex flex-col md:flex-row items-center gap-6 mb-6 bg-[#1E1E1E] p-8 rounded-3xl border border-[#333] relative overflow-hidden">
+    <div class="flex flex-col md:flex-row items-center gap-6 mb-6 bg-[#1E1E1E] p-8 rounded-md border border-[#333] relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-[#00E676]/5 to-transparent"></div>
         
         <img src="{{ escudo }}" class="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl relative z-10">
@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <div class="bg-[#1E1E1E] p-6 rounded-3xl border border-[#333] mb-6 shadow-lg relative overflow-hidden">
+    <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] mb-6 shadow-lg relative overflow-hidden">
         <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
             <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
         </div>
@@ -57,7 +57,7 @@
         
         <div class="md:col-span-4 space-y-6">
             
-            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333] min-h-[400px]">
+            <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] min-h-[400px]">
                 
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-white text-xs font-black uppercase tracking-widest flex items-center gap-2">
@@ -77,10 +77,10 @@
 
                 <div id="lista-finalizados" class="space-y-4 animate-fadeIn">
                     {% for item in historico %}
-                    <div class="flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 rounded transition-colors">
+                    <div class="flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 transition-colors">
                         <div class="flex items-center gap-3">
                             <span class="w-6 h-6 rounded flex items-center justify-center font-bold text-[10px] shadow-lg
-                                {% if item.resultado == 'V' %}bg-[#00E676] text-black shadow-[#00E676]/20
+                                {% if item.resultado == 'V' %}bg-[#00E676] text-black
                                 {% elif item.resultado == 'E' %}bg-gray-600 text-white
                                 {% else %}bg-red-500 text-white shadow-red-500/20{% endif %}">
                                 {{ item.resultado }}
@@ -101,7 +101,7 @@
 
                 <div id="lista-proximos" class="space-y-3 hidden animate-fadeIn">
                     {% for p in proximos %}
-                    <div class="flex items-center justify-between text-sm bg-[#252525] p-3 rounded-xl border border-[#333] hover:border-[#00E676] transition-colors group">
+                    <div class="flex items-center justify-between text-sm bg-[#252525] p-3 rounded-md border border-[#333] hover:border-[#00E676] transition-colors group">
                         <div class="flex flex-col">
                             <span class="text-[10px] text-gray-500 font-mono mb-1">{{ p.data|date:"d/m • H:i" }}</span>
                             <div class="flex items-center gap-2">
@@ -122,7 +122,7 @@
         </div>
 
         <div class="md:col-span-8">
-            <div class="bg-[#1E1E1E] p-6 rounded-2xl border border-[#333] h-[500px] relative shadow-lg">
+            <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] h-[500px] relative shadow-lg">
                 <h3 class="text-white text-lg font-black uppercase tracking-widest mb-6 flex items-center gap-2">
                     <svg class="w-5 h-5 text-[#00E676]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                     Evolução no Campeonato
