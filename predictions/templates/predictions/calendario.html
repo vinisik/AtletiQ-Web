@@ -33,8 +33,31 @@
     <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 class="text-[#00E676] text-3xl md:text-4xl font-black tracking-tighter uppercase"> Calendário <span class="text-white">{{ liga_atual.nome }}</span>
         </h2>
+
+        <form method="GET" class="w-full md:w-auto min-w-[250px]" id="formFiltroTime">
+            <input type="hidden" name="liga" value="{{ liga_atual.slug }}">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg class="w-4 h-4 text-[#00E676]" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                    </svg>
+                </div>
+                <select name="time" onchange="document.getElementById('formFiltroTime').submit();" 
+                        class="bg-[#121212] border border-[#333] text-white text-sm rounded-xl focus:ring-[#00E676] focus:border-[#00E676] block w-full pl-10 p-3 outline-none font-bold tracking-wider cursor-pointer hover:border-[#444] transition-colors appearance-none">
+                    <option value="" disabled selected hidden>Selecionar Time</option>
+                    <option value="">Todos</option>
+                    {% for t in times_dropdown %}
+                    <option value="{{ t.id }}" {% if time_selecionado == t.id %}selected{% endif %}>{{ t.nome }}</option>
+                    {% endfor %}
+                </select>
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+            </div>
+        </form>
     </div>
 
+    {% if not time_selecionado %}
     <div class="w-full mx-auto flex items-center justify-between mb-10 p-4 border border-[#333] relative overflow-hidden group-nav">
         <div class="absolute inset-0 bg-gradient-to-r from-[#00E676]/5 via-transparent to-[#00E676]/5 opacity-0 group-nav-hover:opacity-100 transition-opacity"></div>
 
@@ -78,6 +101,14 @@
             </span>
         {% endif %}
     </div>
+    {% else %}
+    <div class="mb-10 p-4 rounded-xl border border-[#333] bg-[#121212] text-center shadow-inner">
+        <p class="text-[#00E676] font-bold uppercase tracking-widest text-xs flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Exibindo calendário completo do time selecionado
+        </p>
+    </div>
+    {% endif %}
 
     <div class="mb-12">
         {% for jogo in jogos %}
@@ -106,7 +137,7 @@
                         <svg class="w-3.5 h-3.5 text-[#00E676]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        {{ jogo.data|date:"H:i" }}
+                        {{ jogo.data|date:"H:i" }} {% if time_selecionado %}<span class="text-[#00E676] ml-2">R{{ jogo.rodada }}</span>{% endif %}
                     </span>
                     <span class="text-[10px] font-black tracking-tighter uppercase {% if jogo.fthg is not None %}text-gray-500{% else %}text-[#00E676]{% endif %}">
                         {% if jogo.fthg is not None %}ENCERRADO{% else %}AGENDADO{% endif %}
@@ -127,6 +158,9 @@
                             {% endif %}
                             {{ jogo.data|date:"H:i" }}
                         </span>
+                        {% if time_selecionado %}
+                        <span class="text-[#00E676] font-black text-[9px] mt-1 uppercase tracking-widest text-center">Rodada {{ jogo.rodada }}</span>
+                        {% endif %}
                     </div>
 
                     <div class="flex-1 flex items-center justify-between gap-2">
@@ -163,7 +197,7 @@
 
         {% empty %}
             <div class="py-16 text-center border-2 border-dashed border-[#333] rounded-3xl bg-[#121212]/50">
-                <p class="text-gray-400 font-bold text-lg">Sem jogos nesta rodada para esta liga</p>
+                <p class="text-gray-400 font-bold text-lg">Nenhum jogo encontrado</p>
             </div>
         {% endfor %}
     </div>
@@ -260,7 +294,6 @@
                     if(content) {
                         let infoDinamica = '';
 
-                        // Renderização Condicional baseada no status do jogo
                         if (data.encerrado) {
                             let timelineHtml = '<p class="text-center text-gray-600 text-xs py-4">Eventos detalhados não fornecidos pela API.</p>';
                             
@@ -310,7 +343,7 @@
                             infoDinamica = `
                                 <div class="bg-[#181818] rounded-md p-5 border border-[#333] mb-4 relative">
                                     <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-6 text-center">
-                                        Eventos da Partida (Dados Simulados)
+                                        Eventos da Partida
                                     </h4>
                                     <div class="relative flex flex-col items-center">
                                         <div class="absolute top-0 bottom-0 left-1/2 w-px bg-[#333] transform -translate-x-1/2 z-0"></div>

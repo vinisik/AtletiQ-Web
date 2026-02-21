@@ -108,23 +108,55 @@ def calendario(request):
     if not liga_atual: return render(request, 'predictions/calendario.html', {'error': 'Nenhuma liga sincronizada ainda.'})
 
     rodada_param = request.GET.get('rodada')
+    time_param = request.GET.get('time') # Pega o time filtrado
+    
     max_rodada = Partida.objects.filter(liga=liga_atual, temporada=ano_atual).aggregate(m=Max('rodada'))['m'] or 38
 
-    if rodada_param:
-        try: rodada_atual = int(rodada_param)
-        except: rodada_atual = 1
-    else:
-        prox = Partida.objects.filter(liga=liga_atual, temporada=ano_atual, fthg__isnull=True).order_by('rodada').first()
-        rodada_atual = prox.rodada if prox else max_rodada
+    # Busca todos os times da liga e ano atuais para popular o dropdown
+    times_ids = Partida.objects.filter(liga=liga_atual, temporada=ano_atual).values_list('home_team_id', flat=True).distinct()
+    times_dropdown = Time.objects.filter(id__in=times_ids).order_by('nome')
 
-    jogos = Partida.objects.filter(liga=liga_atual, temporada=ano_atual, rodada=rodada_atual).order_by('data')
+    if time_param:
+
+        try:
+            time_selecionado = int(time_param)
+            jogos = Partida.objects.filter(
+                Q(home_team_id=time_selecionado) | Q(away_team_id=time_selecionado),
+                liga=liga_atual, 
+                temporada=ano_atual
+            ).order_by('data')
+            rodada_atual = None
+            anterior = None
+            proxima = None
+        except ValueError:
+            time_selecionado = None
+            jogos = Partida.objects.filter(liga=liga_atual, temporada=ano_atual, rodada=1).order_by('data')
+            rodada_atual = 1
+            anterior = None
+            proxima = 2
+    else:
+        # Lógica se não houver filtro de time
+        time_selecionado = None
+        if rodada_param:
+            try: rodada_atual = int(rodada_param)
+            except: rodada_atual = 1
+        else:
+            prox = Partida.objects.filter(liga=liga_atual, temporada=ano_atual, fthg__isnull=True).order_by('rodada').first()
+            rodada_atual = prox.rodada if prox else max_rodada
+
+        jogos = Partida.objects.filter(liga=liga_atual, temporada=ano_atual, rodada=rodada_atual).order_by('data')
+        anterior = rodada_atual - 1 if rodada_atual > 1 else None
+        proxima = rodada_atual + 1 if rodada_atual < max_rodada else None
+
     escudos = carregar_escudos_json()
     
     return render(request, 'predictions/calendario.html', {
         'jogos': jogos, 'ESCUDOS': escudos, 'rodada_atual': rodada_atual,
-        'anterior': rodada_atual-1 if rodada_atual>1 else None,
-        'proxima': rodada_atual+1 if rodada_atual<max_rodada else None,
-        'ligas': ligas, 'liga_atual': liga_atual, 'ano_atual': ano_atual
+        'anterior': anterior,
+        'proxima': proxima,
+        'ligas': ligas, 'liga_atual': liga_atual, 'ano_atual': ano_atual,
+        'times_dropdown': times_dropdown,        
+        'time_selecionado': time_selecionado     
     })
 
 def simulacao(request):
