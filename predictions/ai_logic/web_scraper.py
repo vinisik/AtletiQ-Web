@@ -82,3 +82,52 @@ class AtletiQScraper:
         except Exception as e:
             print(f"Erro ao buscar detalhes da partida: {e}")
         return None
+
+
+    def buscar_odds_reais(self, sport_key):
+        """Busca as odds reais pré-jogo via The Odds API."""
+        odds_api_key = os.getenv("ODDS_API_KEY")
+        if not odds_api_key:
+            print("Aviso: ODDS_API_KEY não encontrada no .env.")
+            return {}
+
+        url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
+        params = {
+            'apiKey': odds_api_key,
+            'regions': 'eu', # Pega casas de apostas europeias 
+            'markets': 'h2h', # Resultado da partida 
+            'oddsFormat': 'decimal'
+        }
+        
+        try:
+            response = requests.get(url, params=params)
+            if response.status_code != 200:
+                print(f"Erro na The Odds API: {response.status_code}")
+                return {}
+                
+            data = response.json()
+            odds_dict = {}
+            
+            for jogo in data:
+                home = jogo.get('home_team')
+                away = jogo.get('away_team')
+                
+                # Pega a primeira casa de apostas da lista que tiver dados
+                bookmakers = jogo.get('bookmakers', [])
+                if bookmakers:
+                    markets = bookmakers[0].get('markets', [])
+                    if markets:
+                        outcomes = markets[0].get('outcomes', [])
+                        
+                        # Extrai a odd de cada resultado
+                        odd_h = next((item['price'] for item in outcomes if item['name'] == home), None)
+                        odd_a = next((item['price'] for item in outcomes if item['name'] == away), None)
+                        odd_d = next((item['price'] for item in outcomes if item['name'].lower() == 'draw'), None)
+                        
+                        # Salva num dicionário usando o nome dos times como chave
+                        key = f"{home} x {away}"
+                        odds_dict[key] = {'H': odd_h, 'D': odd_d, 'A': odd_a}
+            return odds_dict
+        except Exception as e:
+            print(f"Erro ao buscar odds: {e}")
+            return {}

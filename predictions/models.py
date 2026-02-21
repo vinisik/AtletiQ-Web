@@ -29,6 +29,10 @@ class Partida(models.Model):
     fthg = models.IntegerField(null=True, blank=True) # Gols Mandante
     ftag = models.IntegerField(null=True, blank=True) # Gols Visitante
 
+    odd_h = models.FloatField(null=True, blank=True)
+    odd_d = models.FloatField(null=True, blank=True)
+    odd_a = models.FloatField(null=True, blank=True)
+
     def __str__(self):
         return f"R{self.rodada}: {self.home_team} x {self.away_team}"
     
