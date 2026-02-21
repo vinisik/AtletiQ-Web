@@ -4,29 +4,30 @@
 {% block content %}
 <div class="px-4 animate-fadeIn mt-6">
     <a href="{% url 'calendario' %}" class="inline-flex items-center gap-3 mb-8 group cursor-pointer w-fit">
-    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-[#1E1E1E] border border-[#333] group-hover:border-[#00E676] group-hover:bg-[#00E676]/10 transition-all duration-300 shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-[#00E676] transition-colors transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-    </div>
+        <div class="w-10 h-10 flex items-center justify-center rounded-full bg-[#1E1E1E] border border-[#333] group-hover:border-[#00E676] group-hover:bg-[#00E676]/10 transition-all duration-300 shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400 group-hover:text-[#00E676] transition-colors transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+        </div>
+        
+        <div class="flex flex-col">
+            <span class="text-[10px] text-gray-500 font-mono uppercase tracking-widest group-hover:text-[#00E676] transition-colors">Voltar ao</span>
+            <h3 class="text-white text-sm font-black uppercase tracking-widest decoration-[#00E676] underline-offset-4 decoration-2 transition-all">Calendário</h3>
+        </div>
+    </a>
     
-    <div class="flex flex-col">
-        <span class="text-[10px] text-gray-500 font-mono uppercase tracking-widest group-hover:text-[#00E676] transition-colors">Voltar ao</span>
-        <h3 class="text-white text-sm font-black uppercase tracking-widest decoration-[#00E676] underline-offset-4 decoration-2 transition-all">Calendário</h3>
-    </div>
-</a>
     <div class="flex flex-col md:flex-row items-center gap-6 mb-6 bg-[#1E1E1E] p-8 rounded-md border border-[#333] relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-[#00E676]/5 to-transparent"></div>
         
-        <img src="{{ escudo }}" class="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl relative z-10">
+        <img src="{{ escudo }}" class="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl relative z-10" onerror="this.src='https://via.placeholder.com/150?text=?️'">
         
         <div class="text-center md:text-left relative z-10">
             <h2 class="text-white text-3xl md:text-5xl font-black tracking-tighter uppercase mb-2">
                 {{ time.nome }}
             </h2>
             <div class="flex items-center justify-center md:justify-start gap-3">
-                <span class="px-3 py-1 rounded bg-[#00E676] text-black font-bold text-xs uppercase tracking-widest">Série A</span>
-                <span class="px-3 py-1 rounded bg-[#333] text-gray-300 font-bold text-xs uppercase tracking-widest">Brasil</span>
+                <span class="px-3 py-1 rounded bg-[#00E676] text-black font-bold text-xs uppercase tracking-widest">{{ liga_nome }}</span>
+                <span class="px-3 py-1 rounded bg-[#333] text-gray-300 font-bold text-xs uppercase tracking-widest">{{ liga_pais }}</span>
             </div>
         </div>
     </div>
@@ -57,7 +58,7 @@
         
         <div class="md:col-span-4 space-y-6">
             
-            <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] min-h-[400px]">
+            <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] min-h-[400px] flex flex-col">
                 
                 <div class="flex items-center justify-between mb-6">
                     <h3 class="text-white text-xs font-black uppercase tracking-widest flex items-center gap-2">
@@ -75,9 +76,9 @@
                     </div>
                 </div>
 
-                <div id="lista-finalizados" class="space-y-4 animate-fadeIn">
+                <div id="lista-finalizados" class="space-y-4 animate-fadeIn flex-1">
                     {% for item in historico %}
-                    <div class="flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 transition-colors">
+                    <div class="jogo-item flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 transition-colors {% if forloop.counter > 5 %}hidden{% endif %}">
                         <div class="flex items-center gap-3">
                             <span class="w-6 h-6 rounded flex items-center justify-center font-bold text-[10px] shadow-lg
                                 {% if item.resultado == 'V' %}bg-[#00E676] text-black
@@ -87,7 +88,9 @@
                             </span>
                             <div class="flex flex-col">
                                 <span class="text-gray-300 font-bold text-xs group-hover:text-white transition-colors">{{ item.adversario.nome }}</span>
-                                <span class="text-[9px] text-gray-600 font-mono">Mando: {{ item.mando }}</span>
+                                <span class="text-[9px] text-gray-600 font-mono">
+                                    {{ item.campeonato }} • {{ item.mando }}
+                                </span>
                             </div>
                         </div>
                         <span class="font-mono text-white font-bold bg-[#121212] px-2 py-1 rounded border border-[#333] text-xs shadow-inner">
@@ -97,9 +100,15 @@
                     {% empty %}
                     <p class="text-gray-600 text-xs italic text-center py-4">Nenhum jogo recente.</p>
                     {% endfor %}
+                    
+                    {% if historico|length > 5 %}
+                    <button id="btn-carregar-mais" onclick="carregarMaisJogos()" class="w-full mt-4 py-2 border border-[#333] rounded-md text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#00E676] hover:border-[#00E676] transition-colors bg-[#121212]">
+                        Carregar Mais
+                    </button>
+                    {% endif %}
                 </div>
 
-                <div id="lista-proximos" class="space-y-3 hidden animate-fadeIn">
+                <div id="lista-proximos" class="space-y-3 hidden animate-fadeIn flex-1">
                     {% for p in proximos %}
                     <div class="flex items-center justify-between text-sm bg-[#252525] p-3 rounded-md border border-[#333] hover:border-[#00E676] transition-colors group">
                         <div class="flex flex-col">
@@ -109,10 +118,12 @@
                                 <span class="text-white font-bold group-hover:text-[#00E676] transition-colors truncate max-w-[120px]">{{ p.adversario.nome }}</span>
                             </div>
                         </div>
-                        <span class="text-[9px] bg-[#333] px-2 py-1 rounded text-gray-400 font-mono border border-[#444]">{{ p.rodada }}ª Rodada</span>
+                        <span class="text-[9px] bg-[#333] px-2 py-1 rounded text-gray-400 font-mono border border-[#444] text-center">
+                            {{ p.campeonato }}<br>R{{ p.rodada }}
+                        </span>
                     </div>
                     {% empty %}
-                    <div class="text-center py-6 border-2 border-dashed border-[#333] rounded-xl">
+                    <div class="text-center py-6 border-2 border-dashed border-[#333] rounded-xl mt-4">
                         <p class="text-gray-600 text-xs italic">Sem jogos agendados.</p>
                     </div>
                     {% endfor %}
@@ -137,6 +148,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Botão carregar mais
+    function carregarMaisJogos() {
+        const jogosOcultos = document.querySelectorAll('.jogo-item.hidden');
+        const itemsParaMostrar = 5; // Mostra de 5 em 5
+        
+        for(let i = 0; i < itemsParaMostrar && i < jogosOcultos.length; i++) {
+            jogosOcultos[i].classList.remove('hidden');
+        }
+        
+        if(document.querySelectorAll('.jogo-item.hidden').length === 0) {
+            document.getElementById('btn-carregar-mais').style.display = 'none';
+        }
+    }
+
     function mudarAba(aba) {
         const listaFinalizados = document.getElementById('lista-finalizados');
         const listaProximos = document.getElementById('lista-proximos');
@@ -150,11 +175,9 @@
             listaFinalizados.classList.remove('hidden');
             listaProximos.classList.add('hidden');
 
-            // Botão Finalizados (Ativo)
             btnFinalizados.classList.add(...activeClasses);
             btnFinalizados.classList.remove(...['text-gray-500', 'hover:text-gray-300', 'bg-transparent', 'border-transparent']);
             
-            // Botão Próximos (Inativo)
             btnProximos.classList.remove(...activeClasses);
             btnProximos.classList.add(...inactiveClasses);
 
@@ -162,11 +185,9 @@
             listaFinalizados.classList.add('hidden');
             listaProximos.classList.remove('hidden');
 
-            // Botão Próximos (Ativo)
             btnProximos.classList.add(...activeClasses);
             btnProximos.classList.remove(...['text-gray-500', 'hover:text-gray-300', 'bg-transparent', 'border-transparent']);
 
-            // Botão Finalizados (Inativo)
             btnFinalizados.classList.remove(...activeClasses);
             btnFinalizados.classList.add(...inactiveClasses);
         }
@@ -177,7 +198,6 @@
         const labels = JSON.parse('{{ evolucao_labels|safe }}');
         const data = JSON.parse('{{ evolucao_data|safe }}');
 
-        // Se não houver dados, mostra mensagem
         if(labels.length === 0) {
             ctx.font = "14px Inter";
             ctx.fillStyle = "#666";
@@ -215,7 +235,7 @@
                 maintainAspectRatio: false,
                 scales: {
                     y: {
-                        reverse: true, // 1º lugar no topo
+                        reverse: true,
                         min: 1,
                         max: 20,
                         grid: { color: '#333', drawBorder: false },

@@ -1,6 +1,5 @@
 import pandas as pd
 import requests
-import time
 import os
 from dotenv import load_dotenv
 
@@ -10,57 +9,53 @@ class AtletiQScraper:
         self.api_key = api_key or os.getenv("API_KEY")
         self.base_url = "https://api.football-data.org/v4/"
         self.headers = {'X-Auth-Token': self.api_key}
+        
+        # Mapeamento de times brasileiros transferido para o __init__
+        self.de_para_br = {
+            'CA Mineiro': 'Atlético-MG', 'CA Paranaense': 'Athletico-PR',
+            'EC Bahia': 'Bahia', 'RB Bragantino': 'RB Bragantino',
+            'Botafogo FR': 'Botafogo', 'SC Corinthians Paulista': 'Corinthians',
+            'Coritiba FBC': 'Coritiba', 'Cuiabá EC': 'Cuiabá', 'Chapecoense AF': 'Chapecoense',
+            'CR Flamengo': 'Flamengo', 'Fluminense FC': 'Fluminense', 'Fortaleza EC': 'Fortaleza',
+            'Grêmio FBPA': 'Grêmio', 'SC Internacional': 'Internacional', 'Mirassol FC': 'Mirassol',
+            'SE Palmeiras': 'Palmeiras', 'São Paulo FC': 'São Paulo', 'Santos FC': 'Santos',
+            'EC Vitória': 'Vitória', 'CR Vasco da Gama': 'Vasco', 'Clube do Remo': 'Remo'
+        }
 
-    def limpar_nome_time(self, nome_raw):
-        """Função auxiliar para padronizar nomes"""
-        return self.de_para.get(nome_raw, nome_raw.replace(' SAF', '').replace(' EC', '').strip())
+    def limpar_nome_time(self, nome_raw, liga_code):
+        nome_clean = nome_raw.replace(' SAF', '').replace(' FC', '').replace(' EC', '').strip()
+        
+        # Usa o dicionário apenas para o Brasil
+        if liga_code == 'BSA':
+            return self.de_para_br.get(nome_raw, nome_clean)
+        
+        return nome_clean
 
-    def buscar_dados_hibrido(self, ano):
+    def buscar_dados_hibrido(self, ano, liga_code='BSA'):
         if not self.api_key:
             print("Erro: API_KEY não encontrada.")
             return None
             
-        print(f"Buscando partidas ({ano})...")
-        url = f"{self.base_url}competitions/BSA/matches"
+        print(f"Buscando {liga_code} ({ano})...")
+        # URL dinâmica baseada na liga
+        url = f"{self.base_url}competitions/{liga_code}/matches"
         params = {'season': int(ano)}
         try:
             response = requests.get(url, headers=self.headers, params=params)
             if response.status_code != 200: 
-                print(f"Erro na API: Status {response.status_code}")
+                # Ligas europeias de 2026 podem não existir na API ainda
+                if response.status_code != 404: 
+                    print(f"Erro na API ({liga_code}): Status {response.status_code}")
                 return None
             
             data = response.json()
             matches = []
             
-            # Mapeamento de nomes para padronização interna 
-            self.de_para = {
-                'CA Mineiro': 'Atlético-MG',
-                'CA Paranaense': 'Athletico-PR',
-                'EC Bahia': 'Bahia',
-                'RB Bragantino': 'RB Bragantino',
-                'Botafogo FR': 'Botafogo',
-                'SC Corinthians Paulista': 'Corinthians',
-                'Coritiba FBC': 'Coritiba',
-                'Cuiabá EC': 'Cuiabá',
-                'Chapecoense AF': 'Chapecoense',
-                'CR Flamengo': 'Flamengo',
-                'Fluminense FC': 'Fluminense',
-                'Fortaleza EC': 'Fortaleza',
-                'Grêmio FBPA': 'Grêmio',
-                'SC Internacional': 'Internacional',
-                'Mirassol FC': 'Mirassol',
-                'SE Palmeiras': 'Palmeiras',
-                'São Paulo FC': 'São Paulo',
-                'Santos FC': 'Santos',
-                'EC Vitória': 'Vitória',
-                'CR Vasco da Gama': 'Vasco',
-                'Clube do Remo': 'Remo'
-            }
-            
             for m in data.get('matches', []):
                 h_raw, a_raw = m['homeTeam'].get('name', ''), m['awayTeam'].get('name', '')
-                home = self.de_para.get(h_raw, h_raw.replace(' SAF', '').replace(' EC', '').strip())
-                away = self.de_para.get(a_raw, a_raw.replace(' SAF', '').replace(' EC', '').strip())
+                
+                home = self.limpar_nome_time(h_raw, liga_code)
+                away = self.limpar_nome_time(a_raw, liga_code)
                 
                 matches.append({
                     'Rodada': m.get('matchday'), 
@@ -74,59 +69,3 @@ class AtletiQScraper:
         except Exception as e:
             print(f"Erro na requisição: {e}")
             return None
-
-    def fetch_scorers(self, ano):
-        """Busca os artilheiros da competição no ano especificado."""
-        if not self.api_key:
-            return None
-            
-        print(f"Buscando artilharia ({ano})...")
-        url = f"{self.base_url}competitions/BSA/scorers"
-        params = {'season': int(ano)}
-        try:
-            response = requests.get(url, headers=self.headers, params=params)
-            if response.status_code != 200: return None
-            data = response.json()
-            scorers = []
-            for s in data.get('scorers', []):
-                nome_time_raw = s['team']['name']
-                nome_time_limpo = self.limpar_nome_time(nome_time_raw)
-
-                # Trata as assistências para evitar None
-                assistencias = s.get('assists')
-                if assistencias is None:
-                    assistencias = 0
-
-                scorers.append({
-                    'Jogador': s['player']['name'],
-                    'Time': nome_time_limpo,
-                    'Gols': s['goals'],
-                    'Assistências': s.get('assists', 0),
-                    'Jogos': s.get('playedMatches', 0)
-                })
-            return pd.DataFrame(scorers)
-        except: return None
-
-    def atualizar_artilharia(self, season):
-        """Busca os top scorers da competição e salva no banco."""
-        url = f"{self.base_url}/competitions/BSA/scorers?season={season}"
-        try:
-            response = requests.get(url, headers=self.headers)
-            response.raise_for_status()
-            data = response.json()
-            
-            # Limpa tabela antiga para manter só os atuais
-            from predictions.models import Artilheiro
-            Artilheiro.objects.all().delete()
-            
-            for player in data.get('scorers', []):
-                Artilheiro.objects.create(
-                    nome=player['player']['name'],
-                    time=player['team']['name'],
-                    gols=player['goals'],
-                    assistencias=player.get('assists', 0)
-                )
-            print("Artilharia atualizada com sucesso!")
-            
-        except Exception as e:
-            print(f"Erro ao atualizar artilharia: {e}")

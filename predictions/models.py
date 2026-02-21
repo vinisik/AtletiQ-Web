@@ -8,7 +8,19 @@ class Time(models.Model):
     def __str__(self):
         return self.nome
 
+
+class Liga(models.Model):
+    nome = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True) 
+    pais = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.nome
+
+
 class Partida(models.Model):
+    liga = models.ForeignKey(Liga, on_delete=models.CASCADE, null=True, blank=True)
+    temporada = models.IntegerField(null=True, blank=True)
     rodada = models.IntegerField()
     data = models.DateTimeField()
     home_team = models.ForeignKey(Time, on_delete=models.CASCADE, related_name='jogos_casa')

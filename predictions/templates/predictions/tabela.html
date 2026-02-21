@@ -3,13 +3,34 @@
 
 {% block content %}
 <div class="px-4 animate-fadeIn">
+
+    {% if ligas %}
+    <div class="flex overflow-x-auto gap-3 mb-8 p-2 custom-scrollbar">
+        {% for l in ligas %}
+        <a href="?liga={{ l.slug }}" 
+           class="shrink-0 px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest border transition-all duration-300 shadow-lg
+           {% if liga_atual.slug == l.slug %}
+               bg-[#00E676] text-black border-[#00E676] scale-105
+           {% else %}
+               bg-[#1E1E1E] text-gray-400 border-[#333] hover:border-[#00E676] hover:text-[#00E676]
+           {% endif %}">
+            <div class="flex items-center gap-2">
+                {% if liga_atual.slug == l.slug %}
+                <span class="w-2 h-2 rounded-full bg-black animate-pulse"></span>
+                {% endif %}
+                {{ l.nome }}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="mb-6">
-        <h2 class="text-[#00E676] text-4xl font-black tracking-tighter uppercase flex items-center gap-3">
-            Tabela de Classificação
+        <h2 class="text-[#00E676] text-3xl md:text-4xl font-black tracking-tighter uppercase flex items-center gap-3">
+            Tabela <span class="text-white">{{ liga_atual.nome }}</span>
         </h2>
     </div>
 
-    <!-- Tabela -->
     <div class="overflow-x-auto">
         <table class="w-full text-left text-sm whitespace-nowrap">
             <thead>
@@ -31,11 +52,19 @@
                 {% for time in tabela %}
                 <tr class="hover:bg-white/5 transition-colors group">
                     <td class="p-4 text-center font-black text-xs 
-                        {% if forloop.counter <= 4 %} border-l-2 border-[#00E676] text-[#00E676]
-                        {% elif forloop.counter == 5 %} border-l-2 border-blue-500 text-blue-400
-                        {% elif forloop.counter <= 11 %} border-l-2 border-yellow-500 text-yellow-400
-                        {% elif forloop.counter >= 17 %} border-l-2 border-red-600 text-red-500
-                        {% else %} border-l-2 border-transparent text-gray-500 {% endif %}">
+                        {% if liga_atual.slug == 'brasileirao' %}
+                            {% if forloop.counter <= 4 %} border-l-2 border-[#00E676] text-[#00E676]
+                            {% elif forloop.counter <= 6 %} border-l-2 border-blue-500 text-blue-400
+                            {% elif forloop.counter <= 12 %} border-l-2 border-yellow-500 text-yellow-400
+                            {% elif forloop.counter >= 17 %} border-l-2 border-red-600 text-red-500
+                            {% else %} border-l-2 border-transparent text-gray-500 {% endif %}
+                        {% else %}
+                            {% if forloop.counter <= 4 %} border-l-2 border-[#00E676] text-[#00E676]
+                            {% elif forloop.counter == 5 %} border-l-2 border-blue-500 text-blue-400
+                            {% elif forloop.counter == 6 %} border-l-2 border-yellow-500 text-yellow-400
+                            {% elif forloop.counter >= 18 %} border-l-2 border-red-600 text-red-500
+                            {% else %} border-l-2 border-transparent text-gray-500 {% endif %}
+                        {% endif %}">
                         {{ forloop.counter }}º
                     </td>
                     
@@ -73,30 +102,53 @@
         </table>
     </div>
     
-    <!--Legenda da tabela -->
     <div class="mb-4 flex flex-wrap items-center justify-center md:justify-start gap-6 p-4 rounded-xl border-[#333]">
-        <div class="flex items-center gap-2">
-            <span class="relative flex h-3 w-3">
-              <span class="relative inline-flex h-3 w-3 bg-[#00E676]"></span>
-            </span>
-            <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Libertadores</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <span class="w-3 h-3 bg-blue-500"></span>
-            <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Pré-Libertadores</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <span class="w-3 h-3 bg-yellow-500"></span>
-            <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Sul-Americana</span>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <span class="w-3 h-3 bg-red-600"></span>
-            <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Rebaixamento</span>
-        </div>
+        {% if liga_atual.slug == 'brasileirao' %}
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-3 w-3">
+                  <span class="relative inline-flex h-3 w-3 bg-[#00E676]"></span>
+                </span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Libertadores</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-blue-500"></span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Pré-Libertadores</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-yellow-500"></span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Sul-Americana</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-red-600"></span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Rebaixamento</span>
+            </div>
+        {% else %}
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-3 w-3">
+                  <span class="relative inline-flex h-3 w-3 bg-[#00E676]"></span>
+                </span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Champions League</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-blue-500"></span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Europa League</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-yellow-500"></span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Conference League</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 bg-red-600"></span>
+                <span class="text-[10px] md:text-xs text-gray-300 font-bold tracking-widest">Rebaixamento</span>
+            </div>
+        {% endif %}
     </div>
 
 </div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #333; border-radius: 20px; }
+</style>
 {% endblock %}
