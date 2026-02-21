@@ -5,21 +5,26 @@
 <div class="px-4 animate-fadeIn mt-6">
     
     {% if ligas %}
-    <div class="flex overflow-x-auto gap-3 mb-8 p-2 custom-scrollbar">
+    <div class="flex overflow-x-auto gap-4 mb-8 p-3 custom-scrollbar items-center">
         {% for l in ligas %}
-        <a href="?liga={{ l.slug }}" 
-           class="shrink-0 px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest border transition-all duration-300 shadow-lg
+        <a href="?liga={{ l.slug }}" title="{{ l.nome }}"
+           class="bg-white shrink-0 w-16 h-16 flex items-center justify-center rounded-full border-2 transition-all duration-300 shadow-lg group relative
            {% if liga_atual.slug == l.slug %}
-               bg-[#00E676] text-black border-[#00E676] scale-105
+               bg-white border-[#00E676] scale-110 shadow-[0_0_15px_rgba(0,230,118,0.3)]
            {% else %}
-               bg-[#1E1E1E] text-gray-400 border-[#333] hover:border-[#00E676] hover:text-[#00E676]
+               bg-white border-[#333] hover:border-[#00E676] hover:bg-white
            {% endif %}">
-            <div class="flex items-center gap-2">
-                {% if liga_atual.slug == l.slug %}
-                <span class="w-2 h-2 rounded-full bg-black animate-pulse"></span>
-                {% endif %}
-                {{ l.nome }}
-            </div>
+            
+            <img src="{{ ESCUDOS|dict_get:l.slug }}" alt="{{ l.nome }}" 
+                 class="max-w-[36px] max-h-[36px] object-contain transition-all duration-300
+                 {% if liga_atual.slug == l.slug %} opacity-100 scale-110 {% else %} opacity-85 group-hover:opacity-100 group-hover:scale-110 {% endif %}"
+                 onerror="this.src='https://via.placeholder.com/36/1E1E1E/00E676?text={{ l.slug|slice:':2'|upper }}'">
+                 
+            {% if liga_atual.slug == l.slug %}
+            <span class="absolute -bottom-1 -right-1 w-5 h-5 bg-[#00E676] rounded-full border-2 border-[#121212] flex items-center justify-center shadow-md">
+                <span class="w-2 h-2 bg-black rounded-full animate-pulse"></span>
+            </span>
+            {% endif %}
         </a>
         {% endfor %}
     </div>
@@ -169,7 +174,7 @@
         <div class="p-4 border-b border-[#333] flex justify-between items-center bg-[#181818]">
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-[#00E676] animate-pulse"></span>
-                <span class="text-[#00E676] font-black tracking-widest text-[10px] uppercase">Análise AtletiQ</span>
+                <span class="text-[#00E676] font-black tracking-widest text-[10px] uppercase">Match Center AtletiQ</span>
             </div>
             <button id="btnFechar" class="bg-[#333] hover:bg-red-500/20 hover:text-red-500 text-gray-400 w-8 h-8 rounded-full transition-all flex items-center justify-center font-bold">✕</button>
         </div>
@@ -253,13 +258,114 @@
                         </div>`;
 
                     if(content) {
+                        let infoDinamica = '';
+
+                        // Renderização Condicional baseada no status do jogo
+                        if (data.encerrado) {
+                            let timelineHtml = '<p class="text-center text-gray-600 text-xs py-4">Eventos detalhados não fornecidos pela API.</p>';
+                            
+                            if (data.eventos && data.eventos.length > 0) {
+                                timelineHtml = data.eventos.map(ev => {
+                                    let icone = ev.tipo === 'GOAL' ? '⚽' : (ev.tipo === 'YELLOW_CARD' ? '🟨' : (ev.tipo === 'RED_CARD' ? '🟥' : '🔄'));
+                                    if (ev.is_home) {
+                                        return `
+                                            <div class="flex items-center w-full mb-3 text-xs">
+                                                <div class="w-1/2 text-right pr-4 text-white flex items-center justify-end gap-2">
+                                                    <span class="truncate">${ev.jogador}</span> <span class="text-lg">${icone}</span>
+                                                </div>
+                                                <div class="w-8 h-8 shrink-0 bg-[#222] rounded-full flex items-center justify-center font-bold text-gray-400 border border-[#333] shadow-inner">${ev.minuto}'</div>
+                                                <div class="w-1/2 pl-4"></div>
+                                            </div>`;
+                                    } else {
+                                        return `
+                                            <div class="flex items-center w-full mb-3 text-xs">
+                                                <div class="w-1/2 pr-4"></div>
+                                                <div class="w-8 h-8 shrink-0 bg-[#222] rounded-full flex items-center justify-center font-bold text-gray-400 border border-[#333] shadow-inner">${ev.minuto}'</div>
+                                                <div class="w-1/2 text-left pl-4 text-white flex items-center justify-start gap-2">
+                                                    <span class="text-lg">${icone}</span> <span class="truncate">${ev.jogador}</span>
+                                                </div>
+                                            </div>`;
+                                    }
+                                }).join('');
+                            }
+
+                            let escHtml = '';
+                            if (data.escalacoes && data.escalacoes.home && data.escalacoes.home.length > 0) {
+                                const homeList = data.escalacoes.home.map(p => `<li class="py-1 border-b border-[#333]/50 last:border-0 truncate">${p}</li>`).join('');
+                                const awayList = data.escalacoes.away.map(p => `<li class="py-1 border-b border-[#333]/50 last:border-0 truncate">${p}</li>`).join('');
+                                escHtml = `
+                                    <div class="mt-6 border-t border-[#333] pt-6 flex gap-4 text-xs text-gray-400">
+                                        <div class="w-1/2 bg-[#121212] p-3 rounded-lg border border-[#333]">
+                                            <h5 class="text-center font-black text-white mb-3 uppercase tracking-widest text-[10px] text-[#00E676]">${data.home}</h5>
+                                            <ul class="text-center">${homeList}</ul>
+                                        </div>
+                                        <div class="w-1/2 bg-[#121212] p-3 rounded-lg border border-[#333]">
+                                            <h5 class="text-center font-black text-white mb-3 uppercase tracking-widest text-[10px] text-blue-500">${data.away}</h5>
+                                            <ul class="text-center">${awayList}</ul>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+
+                            infoDinamica = `
+                                <div class="bg-[#181818] rounded-md p-5 border border-[#333] mb-4 relative">
+                                    <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-6 text-center">
+                                        Eventos da Partida (Dados Simulados)
+                                    </h4>
+                                    <div class="relative flex flex-col items-center">
+                                        <div class="absolute top-0 bottom-0 left-1/2 w-px bg-[#333] transform -translate-x-1/2 z-0"></div>
+                                        <div class="relative z-10 w-full">
+                                            ${timelineHtml}
+                                        </div>
+                                    </div>
+                                    ${escHtml}
+                                </div>
+                            `;
+
+                        } else {
+                            infoDinamica = `
+                                <div class="bg-[#181818] rounded-md p-5 border border-[#333] mb-4 relative overflow-hidden">
+                                    <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
+                                        Probabilidades Calculadas
+                                    </h4>
+                                    <div class="grid grid-cols-3 gap-4 relative z-10">
+                                        <div class="text-center">
+                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Casa</div>
+                                            <div class="bg-[#00E676]/10 border border-[#00E676]/30 rounded-b-lg p-3 text-[#00E676] font-black text-2xl">${formatPct(data.prob_casa)}%</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="bg-[#121212] rounded-t-md border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Empate</div>
+                                            <div class="bg-[#222] border border-[#333] rounded-b-md p-3 text-gray-300 font-black text-2xl">${formatPct(data.prob_empate)}%</div>
+                                        </div>
+                                        <div class="text-center">
+                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Fora</div>
+                                            <div class="bg-blue-500/10 border border-blue-500/30 rounded-b-lg p-3 text-blue-400 font-black text-2xl">${formatPct(data.prob_visitante)}%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-6 border-t border-[#333] pt-6 mb-4">
+                                    <h4 class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-[#00E676]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                                        Voz da Torcida
+                                    </h4>
+                                    
+                                    <div class="flex gap-3 mb-4" id="btnsVotacao">
+                                        <button onclick="votar('${id}', 'H')" class="flex-1 bg-[#121212] hover:bg-[#00E676] hover:text-black border border-[#333] rounded-md py-3 text-xs font-bold transition-all uppercase tracking-wide">Casa</button>
+                                        <button onclick="votar('${id}', 'D')" class="flex-1 bg-[#121212] hover:bg-gray-400 hover:text-black border border-[#333] rounded-md py-3 text-xs font-bold transition-all uppercase tracking-wide">Empate</button>
+                                        <button onclick="votar('${id}', 'A')" class="flex-1 bg-[#121212] hover:bg-blue-500 hover:text-black border border-[#333] rounded-md py-3 text-xs font-bold transition-all uppercase tracking-wide">Fora</button>
+                                    </div>
+                                    <div id="barrasVotacao" class="hidden space-y-3 text-[10px] font-bold uppercase"></div>
+                                </div>
+                            `;
+                        }
+
                         content.innerHTML = `
                             <div id="shareCard" class="bg-[#1E1E1E] p-4 rounded-md">
                                 <div class="flex items-center justify-between mb-4">
-                                     <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Previsão AtletiQ</span>
+                                     <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Match Report AtletiQ</span>
                                      <div class="flex items-center gap-1">
                                         <span class="w-2 h-2 bg-[#00E676] rounded-full"></span>
-                                        <span class="text-[10px] text-[#00E676] font-bold uppercase">IA Model</span>
+                                        <span class="text-[10px] text-[#00E676] font-bold uppercase">AtletiQ AI</span>
                                      </div>
                                 </div>
 
@@ -293,44 +399,13 @@
                                     </div>
                                 </div>
                                 
-                                <div class="bg-[#181818] rounded-md p-5 border border-[#333] mb-4 relative overflow-hidden">
-                                    <h4 class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
-                                        Probabilidades Calculadas
-                                    </h4>
-                                    <div class="grid grid-cols-3 gap-4 relative z-10">
-                                        <div class="text-center">
-                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Casa</div>
-                                            <div class="bg-[#00E676]/10 border border-[#00E676]/30 rounded-b-lg p-3 text-[#00E676] font-black text-2xl">${formatPct(data.prob_casa)}%</div>
-                                        </div>
-                                        <div class="text-center">
-                                            <div class="bg-[#121212] rounded-t-md border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Empate</div>
-                                            <div class="bg-[#222] border border-[#333] rounded-b-md p-3 text-gray-300 font-black text-2xl">${formatPct(data.prob_empate)}%</div>
-                                        </div>
-                                        <div class="text-center">
-                                            <div class="bg-[#121212] rounded-t-lg border-x border-t border-[#333] p-2 text-[10px] text-gray-400 font-bold uppercase">Fora</div>
-                                            <div class="bg-blue-500/10 border border-blue-500/30 rounded-b-lg p-3 text-blue-400 font-black text-2xl">${formatPct(data.prob_visitante)}%</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-6 border-t border-[#333] pt-6">
-                                <h4 class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <svg class="w-4 h-4 text-[#00E676]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-                                    Voz da Torcida
-                                </h4>
-                                
-                                <div class="flex gap-3 mb-4" id="btnsVotacao">
-                                    <button onclick="votar('${id}', 'H')" class="flex-1 bg-[#121212] hover:bg-[#00E676] hover:text-black border border-[#333] rounded-md py-3 text-xs font-bold transition-all uppercase tracking-wide">Casa</button>
-                                    <button onclick="votar('${id}', 'D')" class="flex-1 bg-[#121212] hover:bg-gray-400 hover:text-black border border-[#333] rounded-md py-3 text-xs font-bold transition-all uppercase tracking-wide">Empate</button>
-                                    <button onclick="votar('${id}', 'A')" class="flex-1 bg-[#121212] hover:bg-blue-500 hover:text-black border border-[#333] rounded-md py-3 text-xs font-bold transition-all uppercase tracking-wide">Fora</button>
-                                </div>
+                                ${infoDinamica}
 
-                                <div id="barrasVotacao" class="hidden space-y-3 text-[10px] font-bold uppercase"></div>
                             </div>
 
                             <button onclick="compartilharPrevisao()" class="mt-8 w-full bg-[#00E676] text-black font-black uppercase tracking-widest py-4 rounded-md hover:bg-[#00c865] transition-transform active:scale-[0.98] flex items-center justify-center gap-3 text-sm">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                                Compartilhar Previsão
+                                Compartilhar Relatório
                             </button>
 
                             <div class="mt-8">

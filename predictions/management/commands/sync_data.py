@@ -59,6 +59,7 @@ class Command(BaseCommand):
                         rodada=row['Rodada'],
                         temporada=ano, 
                         defaults={
+                            'api_id': row.get('api_id'),
                             'data': parse_datetime(row['Date']) if isinstance(row['Date'], str) else row['Date'],
                             'fthg': fthg, 
                             'ftag': ftag,

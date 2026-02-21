@@ -21,6 +21,7 @@ class Liga(models.Model):
 class Partida(models.Model):
     liga = models.ForeignKey(Liga, on_delete=models.CASCADE, null=True, blank=True)
     temporada = models.IntegerField(null=True, blank=True)
+    api_id = models.IntegerField(null=True, blank=True, unique=True)
     rodada = models.IntegerField()
     data = models.DateTimeField()
     home_team = models.ForeignKey(Time, on_delete=models.CASCADE, related_name='jogos_casa')

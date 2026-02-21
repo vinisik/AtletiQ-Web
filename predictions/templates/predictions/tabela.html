@@ -5,21 +5,26 @@
 <div class="px-4 animate-fadeIn">
 
     {% if ligas %}
-    <div class="flex overflow-x-auto gap-3 mb-8 p-2 custom-scrollbar">
+    <div class="flex overflow-x-auto gap-4 mb-8 p-3 custom-scrollbar items-center">
         {% for l in ligas %}
-        <a href="?liga={{ l.slug }}" 
-           class="shrink-0 px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest border transition-all duration-300 shadow-lg
+        <a href="?liga={{ l.slug }}" title="{{ l.nome }}"
+           class="bg-white shrink-0 w-16 h-16 flex items-center justify-center rounded-full border-2 transition-all duration-300 shadow-lg group relative
            {% if liga_atual.slug == l.slug %}
-               bg-[#00E676] text-black border-[#00E676] scale-105
+               bg-white border-[#00E676] scale-110 shadow-[0_0_15px_rgba(0,230,118,0.3)]
            {% else %}
-               bg-[#1E1E1E] text-gray-400 border-[#333] hover:border-[#00E676] hover:text-[#00E676]
+               bg-white border-[#333] hover:border-[#00E676] hover:bg-white
            {% endif %}">
-            <div class="flex items-center gap-2">
-                {% if liga_atual.slug == l.slug %}
-                <span class="w-2 h-2 rounded-full bg-black animate-pulse"></span>
-                {% endif %}
-                {{ l.nome }}
-            </div>
+            
+            <img src="{{ ESCUDOS|dict_get:l.slug }}" alt="{{ l.nome }}" 
+                 class="max-w-[36px] max-h-[36px] object-contain transition-all duration-300
+                 {% if liga_atual.slug == l.slug %} opacity-100 scale-110 {% else %} opacity-85 group-hover:opacity-100 group-hover:scale-110 {% endif %}"
+                 onerror="this.src='https://via.placeholder.com/36/1E1E1E/00E676?text={{ l.slug|slice:':2'|upper }}'">
+                 
+            {% if liga_atual.slug == l.slug %}
+            <span class="absolute -bottom-1 -right-1 w-5 h-5 bg-[#00E676] rounded-full border-2 border-[#121212] flex items-center justify-center shadow-md">
+                <span class="w-2 h-2 bg-black rounded-full animate-pulse"></span>
+            </span>
+            {% endif %}
         </a>
         {% endfor %}
     </div>

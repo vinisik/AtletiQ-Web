@@ -43,7 +43,6 @@ class AtletiQScraper:
         try:
             response = requests.get(url, headers=self.headers, params=params)
             if response.status_code != 200: 
-                # Ligas europeias de 2026 podem não existir na API ainda
                 if response.status_code != 404: 
                     print(f"Erro na API ({liga_code}): Status {response.status_code}")
                 return None
@@ -58,6 +57,7 @@ class AtletiQScraper:
                 away = self.limpar_nome_time(a_raw, liga_code)
                 
                 matches.append({
+                    'api_id': m.get('id'),
                     'Rodada': m.get('matchday'), 
                     'Date': m.get('utcDate'), 
                     'HomeTeam': home, 
@@ -69,3 +69,16 @@ class AtletiQScraper:
         except Exception as e:
             print(f"Erro na requisição: {e}")
             return None
+        
+
+    def buscar_detalhes_partida(self, api_id):
+        """Busca evento e escalações de uma partida pelo ID da API."""
+        if not self.api_key or not api_id: return None
+        url = f"{self.base_url}matches/{api_id}"
+        try:
+            response = requests.get(url, headers=self.headers)
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Erro ao buscar detalhes da partida: {e}")
+        return None
