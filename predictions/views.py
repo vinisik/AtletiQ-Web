@@ -3,6 +3,9 @@ import logging
 import json
 import os
 import random
+import datetime
+from django.http import HttpResponse
+from django.utils import timezone
 from django.conf import settings
 from django.db import models
 from django.shortcuts import render, get_object_or_404, redirect
@@ -103,21 +106,20 @@ def classificacao(request):
         'ligas': ligas, 'liga_atual': liga_atual, 'ano_atual': ano_atual
     })
 
+
 def calendario(request):
     liga_atual, ligas, ano_atual = get_liga_context(request)
     if not liga_atual: return render(request, 'predictions/calendario.html', {'error': 'Nenhuma liga sincronizada ainda.'})
 
     rodada_param = request.GET.get('rodada')
-    time_param = request.GET.get('time') # Pega o time filtrado
+    time_param = request.GET.get('time')
     
     max_rodada = Partida.objects.filter(liga=liga_atual, temporada=ano_atual).aggregate(m=Max('rodada'))['m'] or 38
 
-    # Busca todos os times da liga e ano atuais para popular o dropdown
     times_ids = Partida.objects.filter(liga=liga_atual, temporada=ano_atual).values_list('home_team_id', flat=True).distinct()
     times_dropdown = Time.objects.filter(id__in=times_ids).order_by('nome')
 
     if time_param:
-
         try:
             time_selecionado = int(time_param)
             jogos = Partida.objects.filter(
@@ -135,7 +137,6 @@ def calendario(request):
             anterior = None
             proxima = 2
     else:
-        # Lógica se não houver filtro de time
         time_selecionado = None
         if rodada_param:
             try: rodada_atual = int(rodada_param)
@@ -148,15 +149,40 @@ def calendario(request):
         anterior = rodada_atual - 1 if rodada_atual > 1 else None
         proxima = rodada_atual + 1 if rodada_atual < max_rodada else None
 
+    jogos_list = list(jogos)
+    try:
+        dados_ia = carregar_ia()
+        if dados_ia and len(dados_ia) == 4:
+            modelos, encoder, colunas, time_stats = dados_ia
+            
+            for jogo in jogos_list:
+                # Se o banco de dados não tem a odd real da API
+                if not getattr(jogo, 'odd_h', None):
+                    # Roda o algoritmo de predição
+                    res = prever_jogo_especifico(jogo.home_team.nome, jogo.away_team.nome, modelos, encoder, time_stats, colunas)
+                    if res:
+                        # Proteção contra divisão por zero
+                        p_casa = max(res.get('Casa', 0.33), 0.01)
+                        p_empate = max(res.get('Empate', 0.33), 0.01)
+                        p_fora = max(res.get('Visitante', 0.33), 0.01)
+                        
+                        # Cálculo real da casa de apostas (Odd = 1 / Probabilidade)
+                        setattr(jogo, 'odd_h_calc', round(0.95 / p_casa, 2))
+                        setattr(jogo, 'odd_d_calc', round(0.95 / p_empate, 2))
+                        setattr(jogo, 'odd_a_calc', round(0.95 / p_fora, 2))
+    except Exception as e:
+        print(f"Erro ao calcular odds com IA: {e}")
+
     escudos = carregar_escudos_json()
     
     return render(request, 'predictions/calendario.html', {
-        'jogos': jogos, 'ESCUDOS': escudos, 'rodada_atual': rodada_atual,
+        'jogos': jogos_list,
+        'ESCUDOS': escudos, 'rodada_atual': rodada_atual,
         'anterior': anterior,
         'proxima': proxima,
         'ligas': ligas, 'liga_atual': liga_atual, 'ano_atual': ano_atual,
-        'times_dropdown': times_dropdown,        
-        'time_selecionado': time_selecionado     
+        'times_dropdown': times_dropdown,
+        'time_selecionado': time_selecionado
     })
 
 def simulacao(request):
@@ -384,3 +410,61 @@ def votar_partida(request, partida_id):
                 return JsonResponse({'total': t, 'H': int((h/t)*100), 'D': int((d/t)*100), 'A': int((a/t)*100)})
         except: pass
     return JsonResponse({}, status=400)
+
+def exportar_calendario(request):
+    """Gera um arquivo .ICS que o Google Calendar e outros reconhecem automaticamente."""
+    liga_slug = request.GET.get('liga')
+    time_id = request.GET.get('time')
+
+    if not liga_slug:
+        return HttpResponse("Liga não especificada", status=400)
+
+    liga_atual = get_object_or_404(Liga, slug=liga_slug)
+    ultimo_jogo = Partida.objects.filter(liga=liga_atual).order_by('-temporada').first()
+    ano_atual = ultimo_jogo.temporada if ultimo_jogo and ultimo_jogo.temporada else 2026
+
+    # Pega todos os jogos da liga
+    jogos = Partida.objects.filter(liga=liga_atual, temporada=ano_atual).order_by('data')
+    filename = f"calendario_{liga_slug}.ics"
+
+    # Se escolheu um time específico, filtra os jogos
+    if time_id and time_id.strip():
+        time_obj = get_object_or_404(Time, pk=time_id)
+        jogos = jogos.filter(Q(home_team=time_obj) | Q(away_team=time_obj))
+        filename = f"calendario_{time_obj.nome.replace(' ', '_').lower()}.ics"
+
+    # Estrutura do Arquivo iCalendar (.ics)
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//AtletiQ//Match Calendar//PT",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+    ]
+
+    for jogo in jogos:
+        if not jogo.data: continue
+
+        # Converte a data do banco para UTC (formato exigido pelo Google Calendar)
+        dt = jogo.data
+        if timezone.is_aware(dt):
+            dt = dt.astimezone(datetime.timezone.utc)
+
+        dtstart = dt.strftime('%Y%m%dT%H%M%SZ')
+        # Calcula que a partida tem 2 horas de duração
+        dtend = (dt + datetime.timedelta(hours=2)).strftime('%Y%m%dT%H%M%SZ')
+
+        lines.append("BEGIN:VEVENT")
+        lines.append(f"UID:match_{jogo.pk}@atletiq.com")
+        lines.append(f"DTSTAMP:{datetime.datetime.utcnow().strftime('%Y%m%dT%H%M%SZ')}")
+        lines.append(f"DTSTART:{dtstart}")
+        lines.append(f"DTEND:{dtend}")
+        lines.append(f"SUMMARY:{jogo.home_team.nome} x {jogo.away_team.nome}")
+        lines.append(f"DESCRIPTION:Partida válida pela {liga_atual.nome} - Rodada {jogo.rodada}\\nGerado via AtletiQ.")
+        lines.append("END:VEVENT")
+
+    lines.append("END:VCALENDAR")
+
+    response = HttpResponse('\r\n'.join(lines), content_type='text/calendar')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
