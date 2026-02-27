@@ -1,0 +1,29 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    <li>
+        <a href="sincronizar-api/" id="btn-sync" class="addlink" style="border-radius: 20px; transition: all 0.3s ease;">
+            <span id="sync-text">Sincronizar API</span>
+        </a>
+    </li>
+    
+    {{ block.super }}
+
+    <script>
+        document.getElementById('btn-sync').addEventListener('click', function(e) {
+            if (this.classList.contains('is-loading')) {
+                e.preventDefault();
+                return;
+            }
+            
+            // Muda o estado do botão
+            this.classList.add('is-loading');
+            this.style.backgroundColor = '#555';
+            this.style.color = '#fff';
+            this.style.cursor = 'wait';
+            
+            // Adiciona um spinner CSS e muda o texto
+            document.getElementById('sync-text').innerHTML = '⏳ A Sincronizar (Isso pode levar 1-2 minutos)...';
+        });
+    </script>
+{% endblock %}

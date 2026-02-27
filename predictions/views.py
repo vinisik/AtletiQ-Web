@@ -23,13 +23,24 @@ from django.core.management import call_command
 logger = logging.getLogger('predictions')
 
 def carregar_escudos_json():
-    caminho_json = os.path.join(settings.BASE_DIR, 'escudos.json')
-    try:
-        with open(caminho_json, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        logger.error(f"Erro ao carregar escudos.json: {e}")
-        return {}
+    # Carrega o fallback do JSON 
+    caminho_arquivo = os.path.join(settings.BASE_DIR, 'escudos.json') 
+    escudos_dict = {}
+    if os.path.exists(caminho_arquivo):
+        with open(caminho_arquivo, 'r', encoding='utf-8') as f:
+            escudos_dict = json.load(f)
+
+    # Pega todos os times que têm uma URL cadastrada
+    times_com_escudo = Time.objects.exclude(escudo_url__isnull=True).exclude(escudo_url__exact='')
+    for time in times_com_escudo:
+        escudos_dict[time.nome] = time.escudo_url
+
+    # Pega todas as ligas que têm uma URL cadastrada
+    ligas_com_logo = Liga.objects.exclude(logo_url__isnull=True).exclude(logo_url__exact='')
+    for liga in ligas_com_logo:
+        escudos_dict[liga.slug] = liga.logo_url
+
+    return escudos_dict
 
 def obter_contexto_ia(liga_obj=None):
     qs = Partida.objects.filter(fthg__isnull=False)
@@ -238,8 +249,8 @@ def detalhes_confronto(request, partida_id):
 
         if partida.fthg is not None:
             # Bypass da limitação da API gratuita
-            home_goals = int(partida.fthg)
-            away_goals = int(partida.ftag)
+            home_goals = int(partida.fthg or 0)
+            away_goals = int(partida.ftag or 0)
             
             # Gerando os gols reais do time da Casa na timeline
             for _ in range(home_goals):
@@ -273,7 +284,11 @@ def detalhes_confronto(request, partida_id):
 
         def get_form(time_obj):
             qs = Partida.objects.filter((Q(home_team=time_obj)|Q(away_team=time_obj)), fthg__isnull=False).order_by('-data')[:5]
-            return ['V' if (j.home_team==time_obj and j.fthg>j.ftag) or (j.away_team==time_obj and j.ftag>j.fthg) else 'E' if j.fthg==j.ftag else 'D' for j in qs]
+            return [
+                'V' if (j.home_team == time_obj and (j.fthg or 0) > (j.ftag or 0)) or (j.away_team == time_obj and (j.ftag or 0) > (j.fthg or 0)) 
+                else 'E' if j.fthg == j.ftag else 'D' 
+                for j in qs
+            ]
 
         return JsonResponse({
             'id': partida.pk, 'home': partida.home_team.nome, 'home_id': partida.home_team.pk,
@@ -306,15 +321,18 @@ def detalhes_time(request, time_id):
     
     historico = []
     for j in jogos:
+        hg = int(j.fthg or 0)
+        ag = int(j.ftag or 0)
+        
         res = 'E'
-        if j.fthg != j.ftag:
-            venceu = (j.home_team == time_obj and j.fthg > j.ftag) or (j.away_team == time_obj and j.ftag > j.fthg)
+        if hg != ag:
+            venceu = (j.home_team == time_obj and hg > ag) or (j.away_team == time_obj and ag > hg)
             res = 'V' if venceu else 'D'
         
         adv = j.away_team if j.home_team == time_obj else j.home_team
         historico.append({
             'jogo': j, 'resultado': res, 'adversario': adv, 
-            'placar': f"{int(j.fthg)} x {int(j.ftag)}",
+            'placar': f"{hg} x {ag}",
             'mando': 'C' if j.home_team == time_obj else 'F',
             'campeonato': j.liga.nome if j.liga else ''
         })
@@ -382,8 +400,11 @@ def obter_ultimos_jogos(time_nome, liga_obj=None, ano=None):
     qs = qs.order_by('-data')[:5]
     res = []
     for j in qs:
-        if j.fthg == j.ftag: res.append('E')
-        elif (j.home_team.nome == time_nome and j.fthg > j.ftag) or (j.away_team.nome == time_nome and j.ftag > j.fthg): res.append('V')
+        hg = int(j.fthg or 0)
+        ag = int(j.ftag or 0)
+        
+        if hg == ag: res.append('E')
+        elif (j.home_team.nome == time_nome and hg > ag) or (j.away_team.nome == time_nome and ag > hg): res.append('V')
         else: res.append('D')
     return res[::-1]
 

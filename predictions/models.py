@@ -3,6 +3,7 @@ from django.db import models
 class Time(models.Model):
     nome = models.CharField(max_length=100, unique=True)
     escudo_url = models.URLField(blank=True, null=True)
+    escudo_url = models.URLField(max_length=500, blank=True, null=True, help_text="Link da imagem do escudo (PNG/SVG)")
     cor_hex = models.CharField(max_length=7, default="#FFFFFF")
 
     def __str__(self):
@@ -13,6 +14,7 @@ class Liga(models.Model):
     nome = models.CharField(max_length=100)
     slug = models.SlugField(unique=True) 
     pais = models.CharField(max_length=50)
+    logo_url = models.URLField(max_length=500, blank=True, null=True, help_text="Cole o link da imagem da liga (PNG/SVG)")
 
     def __str__(self):
         return self.nome

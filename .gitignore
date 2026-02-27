@@ -18,3 +18,4 @@ media/
 .vscode/
 .DS_Store
 Thumbs.db
+.csv
