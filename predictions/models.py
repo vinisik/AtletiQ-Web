@@ -1,4 +1,7 @@
 from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Time(models.Model):
     nome = models.CharField(max_length=100, unique=True)
@@ -61,6 +64,27 @@ class VotoPopular(models.Model):
     partida = models.ForeignKey(Partida, on_delete=models.CASCADE, related_name='votos')
     escolha = models.CharField(max_length=1) 
     ip_address = models.GenericIPAddressField(null=True, blank=True) # Para evitar spam 
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True) # Os votos por user
 
     def __str__(self):
         return f"Voto {self.escolha} no jogo {self.partida}"
+
+class Perfil(models.Model):
+    # Liga o perfil diretamente ao usuário padrão do Django
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    foto = models.ImageField(upload_to='perfil_fotos/', blank=True, null=True)
+    bio = models.TextField(max_length=500, blank=True, help_text="Um breve resumo sobre você.")
+    times_favoritos = models.ManyToManyField(Time, blank=True)
+
+    def __str__(self):
+        return f'Perfil de {self.user.username}'
+
+# Cria o perfil quando o user é criado
+@receiver(post_save, sender=User)
+def criar_perfil(sender, instance, created, **kwargs):
+    if created:
+        Perfil.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def salvar_perfil(sender, instance, **kwargs):
+    instance.perfil.save()

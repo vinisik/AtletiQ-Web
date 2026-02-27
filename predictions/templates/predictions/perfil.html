@@ -1,0 +1,329 @@
+{% extends "predictions/base.html" %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
+    
+    {% if messages %}
+    <div class="mb-6">
+        {% for message in messages %}
+        <div class="bg-[#00E676]/10 border border-[#00E676]/30 text-[#00E676] px-4 py-3 rounded-lg text-sm font-bold flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="mb-8 border-b border-[#333] pb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div>
+            <h2 class="text-3xl font-black text-white uppercase tracking-tighter">Meu <span class="text-[#00E676]">Perfil</span></h2>
+            
+            {% if times_favoritos %}
+            <div class="flex items-center gap-2 mt-3 bg-[#121212] p-2 px-3 rounded-lg border border-[#333] w-max shadow-inner">
+                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mr-2">Times</span>
+                {% for t in times_favoritos %}
+                <img src="{{ ESCUDOS|dict_get:t.nome }}" class="w-5 h-5 object-contain" title="{{ t.nome }}">
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-500 text-xs font-mono uppercase tracking-widest mt-1">Crie sua identidade no AtletiQ</p>
+            {% endif %}
+        </div>
+        
+        <div class="flex flex-col items-end gap-3">
+            <div class="bg-[#121212] border border-[#333] px-4 py-2 rounded-lg text-[#00E676] font-bold text-sm inline-flex items-center gap-2 shadow-inner">
+                {% if user.perfil.foto %}
+                <img src="{{ user.perfil.foto.url }}" class="w-5 h-5 rounded-full object-cover">
+                {% endif %}
+                @{{ user.username }}
+            </div>
+            <button id="toggleEditBtn" class="text-xs bg-[#1E1E1E] hover:bg-[#333] border border-[#333] text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-bold uppercase tracking-wider shadow-lg">
+                <svg class="w-3.5 h-3.5 text-[#00E676]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                Editar Perfil
+            </button>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8 items-start">
+        
+        <div id="editProfileSection" class="hidden w-full lg:w-1/3 flex-col gap-6 transition-all duration-300 opacity-0 scale-95 origin-top">
+            <div class="bg-[#1E1E1E] rounded-2xl border border-[#333] p-5 md:p-7 shadow-xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-white font-black uppercase tracking-widest text-sm flex items-center gap-2">
+                        <svg class="w-4 h-4 text-[#00E676]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                        Editar Informações
+                    </h3>
+                    <button id="closeEditBtn" class="text-gray-500 hover:text-white transition-colors lg:hidden">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" class="profile-form flex flex-col gap-5">
+                    {% csrf_token %}
+
+                    <div class="flex items-center gap-4 mb-2">
+                        <div class="w-16 h-16 rounded-full bg-[#121212] border border-[#00E676] overflow-hidden flex items-center justify-center shrink-0">
+                            {% if user.perfil.foto %}
+                                <img src="{{ user.perfil.foto.url }}" class="w-full h-full object-cover">
+                            {% else %}
+                                <span class="text-2xl font-black text-gray-600">{{ user.username|slice:":1"|upper }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 text-[10px] text-gray-500 uppercase tracking-wider leading-tight">Foto que será exibida na plataforma.</div>
+                    </div>
+
+                    {% for field in form %}
+                        {% if field.name == 'times_favoritos' %}
+                            <div class="flex flex-col gap-2 mt-2">
+                                <label class="text-[10px] text-gray-400 font-black uppercase tracking-widest">{{ field.label }}</label>
+                                
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                    </div>
+                                    <input type="text" id="searchTeams" placeholder="Adicionar mais times..." class="bg-[#121212] border border-[#333] text-white p-3 pl-10 rounded-xl focus:border-[#00E676] outline-none transition-colors w-full text-sm font-bold tracking-wide">
+                                </div>
+
+                                <div id="teamListContainer" class="bg-[#121212] border border-[#333] rounded-xl max-h-48 overflow-y-auto custom-scrollbar p-2 flex flex-col gap-1 shadow-inner">
+                                    {% for t in todos_os_times %}
+                                    <div class="team-option flex items-center justify-between p-2 rounded-lg cursor-pointer hover:bg-[#1E1E1E] transition-all border border-transparent" data-id="{{ t.id }}" data-nome="{{ t.nome|lower }}">
+                                        <div class="flex items-center gap-3">
+                                            <img src="{{ ESCUDOS|dict_get:t.nome }}" class="w-6 h-6 object-contain drop-shadow-md" onerror="this.src='https://via.placeholder.com/24/222/00E676?text={{ t.nome|slice:":1"|upper }}'">
+                                            <span class="text-white font-bold text-[11px] tracking-tight">{{ t.nome }}</span>
+                                        </div>
+                                        <svg class="w-4 h-4 text-[#00E676] hidden check-icon transition-transform scale-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <div class="hidden">{{ field }}</div>
+                            </div>
+
+                        {% else %}
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10px] text-gray-400 font-black uppercase tracking-widest">{{ field.label }}</label>
+                                {{ field }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+
+                    <button type="submit" class="mt-4 w-full bg-[#00E676] text-black font-black uppercase tracking-widest py-3 rounded-xl hover:bg-[#00c865] transition-transform active:scale-[0.98] shadow-lg">
+                        Salvar Alterações
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div id="dashboardSection" class="w-full transition-all duration-500 ease-in-out">
+            <h3 class="text-white font-black uppercase tracking-widest text-lg mb-6 flex items-center gap-2">
+                Seu Painel
+            </h3>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                {% for dado in dados_times %}
+                <div class="bg-[#1E1E1E] rounded-2xl border border-[#333] hover:border-[#00E676] transition-colors overflow-hidden flex flex-col relative group shadow-lg">
+                    
+                    <div class="absolute -right-8 -bottom-8 opacity-5 group-hover:opacity-10 transition-opacity z-0 pointer-events-none">
+                        <img src="{{ ESCUDOS|dict_get:dado.time.nome }}" class="w-48 h-48 object-contain blur-sm">
+                    </div>
+
+                    <div class="bg-[#121212] p-4 border-b border-[#333] flex items-center justify-between relative z-10">
+                        <div class="flex items-center gap-3">
+                            <img src="{{ ESCUDOS|dict_get:dado.time.nome }}" class="w-10 h-10 object-contain drop-shadow-md">
+                            <h4 class="text-white font-black text-lg uppercase tracking-tight truncate max-w-[150px] md:max-w-[200px]">{{ dado.time.nome }}</h4>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            {% if dado.votos > 0 %}
+                            <div class="bg-[#00E676]/10 border border-[#00E676]/30 px-3 py-1 rounded-full flex items-center gap-2 hidden sm:flex">
+                                <span class="text-[9px] md:text-[10px] text-[#00E676] font-bold uppercase tracking-widest">{{ dado.votos }} Votos</span>
+                            </div>
+                            {% endif %}
+                            
+                            <form method="POST" action="{% url 'perfil' %}" class="inline m-0 p-0" onsubmit="return confirm('Tem certeza que deseja remover o {{ dado.time.nome }} da sua lista de favoritos?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="remover_time_id" value="{{ dado.time.id }}">
+                                <button type="submit" class="text-gray-500 hover:text-red-500 bg-[#222] hover:bg-red-500/10 p-2 rounded-lg transition-colors border border-[#333] hover:border-red-500/30" title="Remover dos favoritos">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="p-5 flex-1 flex flex-col gap-6 relative z-10">
+                        <div>
+                            <h5 class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                                Últimos Resultados
+                            </h5>
+                            <div class="flex flex-col gap-2.5">
+                                {% for jogo in dado.ultimas %}
+                                <a href="/?liga={{ jogo.liga.slug }}&time={{ dado.time.id }}" class="flex items-center justify-between bg-[#121212] hover:bg-[#181818] transition-colors p-2.5 rounded-lg border border-[#333]">
+                                    <span class="text-[10px] md:text-[11px] text-white font-bold truncate w-[35%] text-right {% if jogo.home_team == dado.time %}text-[#00E676]{% endif %}">{{ jogo.home_team.nome }}</span>
+                                    <span class="text-[10px] md:text-[11px] bg-[#222] text-gray-300 font-black px-2 py-1 rounded w-[25%] text-center shadow-inner whitespace-nowrap">{{ jogo.fthg|floatformat:0 }} x {{ jogo.ftag|floatformat:0 }}</span>
+                                    <span class="text-[10px] md:text-[11px] text-white font-bold truncate w-[35%] text-left {% if jogo.away_team == dado.time %}text-[#00E676]{% endif %}">{{ jogo.away_team.nome }}</span>
+                                </a>
+                                {% empty %}
+                                <p class="text-[11px] text-gray-600 italic bg-[#121212] p-2 rounded-lg border border-[#333] text-center">Nenhum jogo recente.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <h5 class="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                                Próximos Confrontos
+                            </h5>
+                            <div class="flex flex-col gap-2.5">
+                                {% for jogo in dado.proximas %}
+                                <a href="/?liga={{ jogo.liga.slug }}&time={{ dado.time.id }}" class="flex items-center justify-between bg-[#121212] hover:border-[#00E676]/50 transition-colors p-2.5 rounded-lg border border-[#333] group/game">
+                                    <span class="text-[10px] md:text-[11px] text-white font-bold truncate w-[35%] text-right {% if jogo.home_team == dado.time %}text-gray-300{% endif %}">{{ jogo.home_team.nome }}</span>
+                                    <div class="flex flex-col items-center w-[25%]">
+                                        <span class="text-[8px] md:text-[9px] text-gray-500 font-mono group-hover/game:text-[#00E676] transition-colors">{{ jogo.data|date:"d/m H:i" }}</span>
+                                    </div>
+                                    <span class="text-[10px] md:text-[11px] text-white font-bold truncate w-[35%] text-left {% if jogo.away_team == dado.time %}text-gray-300{% endif %}">{{ jogo.away_team.nome }}</span>
+                                </a>
+                                {% empty %}
+                                <p class="text-[11px] text-gray-600 italic bg-[#121212] p-2 rounded-lg border border-[#333] text-center">Aguardando calendário.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-1 xl:col-span-2 py-16 text-center border-2 border-dashed border-[#333] rounded-md bg-[#121212]/50">
+                    <p class="text-gray-400 font-bold text-base">Você não possui times favoritos.</p>
+                    <button onclick="document.getElementById('toggleEditBtn').click()" class="mt-4 text-[#00E676] text-xs font-bold uppercase tracking-widest hover:underline">
+                        Clique aqui para adicionar times
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Lógica do Painel Oculto 
+        const toggleBtn = document.getElementById('toggleEditBtn');
+        const closeBtn = document.getElementById('closeEditBtn');
+        const editSection = document.getElementById('editProfileSection');
+        const dashboardSection = document.getElementById('dashboardSection');
+        
+        // Verifica se há erros no formulário 
+        const formHasErrors = "{{ form.errors|length }}" > "0";
+
+        function openEditPanel() {
+            editSection.classList.remove('hidden');
+            // Pequeno delay para a transição de CSS 
+            setTimeout(() => {
+                editSection.classList.remove('opacity-0', 'scale-95');
+                editSection.classList.add('opacity-100', 'scale-100');
+                
+                // Reduz o tamanho do dashboard para abrir espaço
+                dashboardSection.classList.remove('w-full');
+                dashboardSection.classList.add('lg:w-2/3');
+            }, 10);
+        }
+
+        function closeEditPanel() {
+            editSection.classList.remove('opacity-100', 'scale-100');
+            editSection.classList.add('opacity-0', 'scale-95');
+            
+            // Retorna o dashboard ao tamanho máximo
+            dashboardSection.classList.remove('lg:w-2/3');
+            dashboardSection.classList.add('w-full');
+            
+            setTimeout(() => {
+                editSection.classList.add('hidden');
+            }, 300); 
+        }
+
+        if (formHasErrors) openEditPanel();
+
+        toggleBtn.addEventListener('click', () => {
+            if (editSection.classList.contains('hidden')) {
+                openEditPanel();
+            } else {
+                closeEditPanel();
+            }
+        });
+
+        if(closeBtn) {
+            closeBtn.addEventListener('click', closeEditPanel);
+        }
+
+        // Barra de Pesquisa de Times
+        const searchInput = document.getElementById('searchTeams');
+        const teamOptions = document.querySelectorAll('.team-option');
+        const hiddenSelect = document.getElementById('id_times_favoritos'); 
+        
+        if(hiddenSelect) {
+            const selectedValues = Array.from(hiddenSelect.selectedOptions).map(opt => opt.value);
+            
+            teamOptions.forEach(option => {
+                const teamId = option.dataset.id;
+                const icon = option.querySelector('.check-icon');
+                if (selectedValues.includes(teamId)) {
+                    option.classList.add('bg-[#252525]', 'border-[#00E676]');
+                    icon.classList.remove('hidden', 'scale-0');
+                    icon.classList.add('scale-100');
+                }
+            });
+
+            searchInput.addEventListener('input', function(e) {
+                const termo = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                teamOptions.forEach(option => {
+                    const nomeTime = option.dataset.nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    option.style.display = nomeTime.includes(termo) ? 'flex' : 'none';
+                });
+            });
+
+            teamOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    const teamId = this.dataset.id;
+                    const selectOption = hiddenSelect.querySelector(`option[value="${teamId}"]`);
+                    const icon = this.querySelector('.check-icon');
+                    
+                    if (selectOption.selected) {
+                        selectOption.selected = false;
+                        this.classList.remove('bg-[#252525]', 'border-[#00E676]');
+                        icon.classList.remove('scale-100');
+                        icon.classList.add('scale-0');
+                        setTimeout(() => icon.classList.add('hidden'), 150);
+                    } else {
+                        selectOption.selected = true;
+                        this.classList.add('bg-[#252525]', 'border-[#00E676]');
+                        icon.classList.remove('hidden');
+                        setTimeout(() => {
+                            icon.classList.remove('scale-0');
+                            icon.classList.add('scale-100');
+                        }, 10);
+                    }
+                });
+            });
+        }
+    });
+</script>
+
+<style>
+    /* Estilos base (os mesmos anteriores) */
+    .profile-form input[type="text"], .profile-form textarea {
+        background-color: #121212 !important; border: 1px solid #333 !important; color: white !important;
+        padding: 0.75rem !important; border-radius: 0.75rem !important; width: 100% !important;
+        outline: none !important; font-size: 0.875rem !important; transition: border-color 0.3s ease;
+    }
+    .profile-form input:focus, .profile-form textarea:focus { border-color: #00E676 !important; }
+    .profile-form input[type="file"] { color: #888; font-size: 0.75rem; }
+    .profile-form input[type="file"]::file-selector-button {
+        background-color: #333; color: white; border: none; padding: 0.5rem 1rem;
+        border-radius: 0.5rem; margin-right: 1rem; cursor: pointer; font-weight: bold; transition: background-color 0.3s ease;
+    }
+    .profile-form input[type="file"]::file-selector-button:hover { background-color: #00E676; color: black; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #333; border-radius: 20px; }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #555; }
+</style>
+{% endblock %}

@@ -12,15 +12,17 @@ from django.conf import settings
 from django.db import models
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from .ai_logic.web_scraper import AtletiQScraper
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
-from .models import VotoPopular, Partida, Time, Titulo, Liga 
+from .models import VotoPopular, Partida, Time, Titulo, Liga, Perfil 
 from django.db.models import Q, F, Sum, Max
 from .ai_logic.predictor import prever_jogo_especifico, simular_campeonato
 from .ai_logic.feature_engineering import preparar_dados_para_modelo
 from .ai_logic.model_trainer import treinar_modelo, carregar_ia, salvar_ia
 from django.core.management import call_command
+from .forms import PerfilForm 
 
 logger = logging.getLogger('predictions')
 
@@ -424,15 +426,34 @@ def votar_partida(request, partida_id):
         try:
             data = json.loads(request.body)
             escolha = data.get('escolha')
+            
             if escolha in ['H', 'D', 'A']:
-                VotoPopular.objects.create(partida_id=partida_id, escolha=escolha)
+                # Verifica se o usuário está logado
+                usuario = request.user if request.user.is_authenticated else None
+                
+                # Salva o voto associado ao usuário (se existir)
+                VotoPopular.objects.create(
+                    partida_id=partida_id, 
+                    escolha=escolha, 
+                    user=usuario
+                )
+                
+                # Calcula as porcentagens para a barra visual do Frontend
                 t = VotoPopular.objects.filter(partida_id=partida_id).count() or 1
                 h = VotoPopular.objects.filter(partida_id=partida_id, escolha='H').count()
                 d = VotoPopular.objects.filter(partida_id=partida_id, escolha='D').count()
                 a = VotoPopular.objects.filter(partida_id=partida_id, escolha='A').count()
-                return JsonResponse({'total': t, 'H': int((h/t)*100), 'D': int((d/t)*100), 'A': int((a/t)*100)})
-        except: pass
-    return JsonResponse({}, status=400)
+                
+                return JsonResponse({
+                    'total': t, 
+                    'H': int((h/t)*100), 
+                    'D': int((d/t)*100), 
+                    'A': int((a/t)*100)
+                })
+        except Exception as e:
+            return JsonResponse({'error': f'Erro ao processar voto: {str(e)}'}, status=400)
+            
+    return JsonResponse({'error': 'Método inválido'}, status=400)
 
 def exportar_calendario(request):
     """Gera um arquivo .ICS que o Google Calendar e outros reconhecem automaticamente."""
@@ -509,3 +530,60 @@ def cadastro(request):
         form = UserCreationForm()
     
     return render(request, 'predictions/cadastro.html', {'form': form})
+
+@login_required
+def perfil(request):
+    if not hasattr(request.user, 'perfil'):
+        Perfil.objects.create(user=request.user)
+
+    if request.method == 'POST':
+        # Verifica se foi um clique no botão de Remover Time
+        remover_id = request.POST.get('remover_time_id')
+        if remover_id:
+            try:
+                time_remover = Time.objects.get(id=remover_id)
+                request.user.perfil.times_favoritos.remove(time_remover)
+                messages.success(request, f"{time_remover.nome} removido dos favoritos!")
+            except Time.DoesNotExist:
+                pass
+            return redirect('perfil')
+
+        # Salvar formulário de edição de Perfil
+        form = PerfilForm(request.POST, request.FILES, instance=request.user.perfil)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Perfil atualizado com sucesso!")
+            return redirect('perfil')
+    else:
+        form = PerfilForm(instance=request.user.perfil)
+
+    times_favoritos = request.user.perfil.times_favoritos.all()
+    escudos = carregar_escudos_json()
+    todos_os_times = Time.objects.all().order_by('nome')
+
+    dados_times = []
+    for time in times_favoritos:
+        ultimas = Partida.objects.filter(
+            Q(home_team=time) | Q(away_team=time), fthg__isnull=False
+        ).order_by('-data')[:3]
+        
+        proximas = Partida.objects.filter(
+            Q(home_team=time) | Q(away_team=time), fthg__isnull=True
+        ).order_by('data')[:3]
+        
+        votos_user = VotoPopular.objects.filter(
+            user=request.user,
+            partida__in=Partida.objects.filter(Q(home_team=time) | Q(away_team=time))
+        ).count()
+
+        dados_times.append({
+            'time': time, 'ultimas': ultimas, 'proximas': proximas, 'votos': votos_user
+        })
+
+    return render(request, 'predictions/perfil.html', {
+        'form': form,
+        'dados_times': dados_times,  
+        'times_favoritos': times_favoritos, 
+        'ESCUDOS': escudos,
+        'todos_os_times': todos_os_times
+    })
