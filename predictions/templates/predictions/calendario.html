@@ -53,10 +53,25 @@
                 <select name="time" onchange="document.getElementById('formFiltroTime').submit();"
                         class="bg-[#121212] border border-[#333] text-white text-sm rounded-xl focus:ring-[#00E676] focus:border-[#00E676] block w-full pl-10 p-3 outline-none font-bold tracking-wider cursor-pointer hover:border-[#444] transition-colors appearance-none">
                     <option value="" disabled selected hidden>Selecionar Time</option>
-                    <option value="">Todos</option>
+                    <option value="">Todos os Jogos</option>
+
+                    {% if user.is_authenticated and user.perfil.times_favoritos.all %}
+                        <optgroup label="Meus Favoritos" class="text-[#00E676] font-black uppercase tracking-widest">
+                            {% for fav in user.perfil.times_favoritos.all %}
+                            <option value="{{ fav.id }}" class="text-white font-bold" {% if time_selecionado|stringformat:"s" == fav.id|stringformat:"s" %}selected{% endif %}>★ {{ fav.nome }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        
+                        <optgroup label="Outros Times" class="text-gray-500 font-bold uppercase tracking-widest">
+                    {% endif %}
+
                     {% for t in times_dropdown %}
-                    <option value="{{ t.id }}" {% if time_selecionado == t.id %}selected{% endif %}>{{ t.nome }}</option>
+                        <option value="{{ t.id }}" class="text-white" {% if time_selecionado|stringformat:"s" == t.id|stringformat:"s" %}selected{% endif %}>{{ t.nome }}</option>
                     {% endfor %}
+
+                    {% if user.is_authenticated and user.perfil.times_favoritos.all %}
+                        </optgroup>
+                    {% endif %}
                 </select>
                 <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                     <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -173,7 +188,12 @@
 
                     <div class="flex-1 flex items-center justify-between gap-2">
                         <div class="flex-1 flex items-center justify-end gap-3 text-right">
-                            <span class="font-bold text-sm md:text-base text-white leading-tight">{{ jogo.home_team.nome }}</span>
+                            <div class="flex items-center gap-1.5 justify-end">
+                                {% if user.is_authenticated and jogo.home_team in user.perfil.times_favoritos.all %}
+                                    <svg class="w-3.5 h-3.5 text-[#00E676] mb-2" fill="currentColor" viewBox="0 0 20 20" title="Seu time favorito!"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                {% endif %}
+                                <span class="font-bold text-sm md:text-base text-white leading-tight">{{ jogo.home_team.nome }}</span>
+                            </div>
                             <img src="{{ ESCUDOS|dict_get:jogo.home_team.nome }}" class="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-md">
                         </div>
 
@@ -189,7 +209,12 @@
 
                         <div class="flex-1 flex items-center justify-start gap-3 text-left">
                             <img src="{{ ESCUDOS|dict_get:jogo.away_team.nome }}" class="w-8 h-8 md:w-10 md:h-10 object-contain drop-shadow-md">
-                            <span class="font-bold text-sm md:text-base text-white leading-tight">{{ jogo.away_team.nome }}</span>
+                            <div class="flex items-center gap-1.5 justify-start">
+                                <span class="font-bold text-sm md:text-base text-white leading-tight">{{ jogo.away_team.nome }}</span>
+                                {% if user.is_authenticated and jogo.away_team in user.perfil.times_favoritos.all %}
+                                    <svg class="w-3.5 h-3.5 text-[#00E676] mb-2" fill="currentColor" viewBox="0 0 20 20" title="Seu time favorito!"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                                {% endif %}
+                            </div>
                         </div>
 
                         <span class="hidden md:inline-block text-[10px] font-black tracking-tighter uppercase mt-1 {% if jogo.fthg is not None %}text-gray-500{% else %}text-[#00E676]{% endif %}">
@@ -284,7 +309,7 @@
         <div class="p-4 border-b border-[#333] flex justify-between items-center bg-[#181818]">
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-[#00E676] animate-pulse"></span>
-                <span class="text-[#00E676] font-black tracking-widest text-[10px] uppercase">Match Center AtletiQ</span>
+                <span class="text-[#00E676] font-black tracking-widest text-[10px] uppercase">Análise AtletiQ</span>
             </div>
             <button id="btnFechar" class="bg-[#333] hover:bg-red-500/20 hover:text-red-500 text-gray-400 w-8 h-8 rounded-full transition-all flex items-center justify-center font-bold">✕</button>
         </div>
@@ -489,7 +514,7 @@
                         content.innerHTML = `
                             <div id="shareCard" class="bg-[#1E1E1E] p-4 rounded-md">
                                 <div class="flex items-center justify-between mb-4">
-                                     <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Match Report AtletiQ</span>
+                                     <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Resumo da Partida </span>
                                      <div class="flex items-center gap-1">
                                         <span class="w-2 h-2 bg-[#00E676] rounded-full"></span>
                                         <span class="text-[10px] text-[#00E676] font-bold uppercase">AtletiQ AI</span>

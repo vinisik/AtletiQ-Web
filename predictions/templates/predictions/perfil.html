@@ -21,7 +21,7 @@
             
             {% if times_favoritos %}
             <div class="flex items-center gap-2 mt-3 bg-[#121212] p-2 px-3 rounded-lg border border-[#333] w-max shadow-inner">
-                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mr-2">Times</span>
+                <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mr-2">Times Favoritos: </span>
                 {% for t in times_favoritos %}
                 <img src="{{ ESCUDOS|dict_get:t.nome }}" class="w-5 h-5 object-contain" title="{{ t.nome }}">
                 {% endfor %}

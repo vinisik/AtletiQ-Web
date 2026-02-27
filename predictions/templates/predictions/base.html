@@ -56,7 +56,16 @@
 
             <div class="flex items-center gap-4">
                 {% if user.is_authenticated %}
-                    <span class="text-white text-sm font-bold">Olá, <span class="text-[#00E676]">{{ user.username }}</span></span>
+                    <a href="{% url 'perfil' %}" class="flex items-center gap-2 hover:opacity-80 transition-opacity" title="Aceder ao Meu Perfil">
+                        {% if user.perfil.foto %}
+                            <img src="{{ user.perfil.foto.url }}" alt="Perfil" class="w-8 h-8 rounded-full border border-[#00E676] object-cover">
+                        {% else %}
+                            <div class="w-8 h-8 rounded-full bg-[#121212] border border-[#00E676] flex items-center justify-center text-xs font-bold text-[#00E676] uppercase">
+                                {{ user.username|slice:":1" }}
+                            </div>
+                        {% endif %}
+                        <span class="text-white text-sm font-bold hidden sm:inline"><span class="text-[#00E676]">{{ user.username }}</span></span>
+                    </a>
                     
                     <form method="POST" action="{% url 'logout' %}">
                         {% csrf_token %}
