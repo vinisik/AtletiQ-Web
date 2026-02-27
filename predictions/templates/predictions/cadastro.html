@@ -1,0 +1,65 @@
+{% extends "predictions/base.html" %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[80vh] px-4 py-8 animate-fadeIn">
+    <div class="bg-[#1E1E1E] w-full max-w-md p-8 rounded-2xl border border-[#333] shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#00E676] to-transparent opacity-70"></div>
+
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-black text-white uppercase tracking-tighter">Criar Conta</h2>
+            <p class="text-xs text-gray-500 mt-2 font-mono uppercase tracking-widest">Junte-se ao AtletiQ</p>
+        </div>
+
+        <form method="POST" class="auth-form flex flex-col gap-4">
+            {% csrf_token %}
+            
+            {% for field in form %}
+                <div class="flex flex-col gap-1">
+                    <label class="text-[10px] text-gray-400 font-black uppercase tracking-widest">{{ field.label }}</label>
+                    
+                    {{ field }}
+                    
+                    {% if field.help_text %}
+                        <p class="text-[9px] text-gray-500 leading-tight mt-1">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                    
+                    {% for error in field.errors %}
+                        <p class="text-[10px] text-red-500 font-bold mt-1 bg-red-500/10 p-2 rounded border border-red-500/20">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <button type="submit" class="mt-4 w-full bg-[#00E676] text-black font-black uppercase tracking-widest py-4 rounded-xl hover:bg-[#00c865] transition-transform active:scale-[0.98]">
+                Cadastrar
+            </button>
+        </form>
+
+        <p class="text-center text-gray-400 text-xs mt-8">
+            Já possui uma conta? 
+            <a href="{% url 'login' %}" class="text-[#00E676] font-bold hover:underline transition-colors">Faça login</a>
+        </p>
+    </div>
+</div>
+
+<style>
+    .auth-form input {
+        background-color: #121212 !important;
+        border: 1px solid #333 !important;
+        color: white !important;
+        padding: 0.75rem !important;
+        border-radius: 0.75rem !important;
+        width: 100% !important;
+        outline: none !important;
+        transition: all 0.3s ease !important;
+    }
+    .auth-form input:focus {
+        border-color: #00E676 !important;
+        box-shadow: 0 0 0 1px #00E676 !important;
+    }
+    .auth-form ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+</style>
+{% endblock %}

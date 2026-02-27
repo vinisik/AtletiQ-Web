@@ -4,6 +4,8 @@ import json
 import os
 import random
 import datetime
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
 from django.http import HttpResponse
 from django.utils import timezone
 from django.conf import settings
@@ -489,3 +491,21 @@ def exportar_calendario(request):
     response = HttpResponse('\r\n'.join(lines), content_type='text/calendar')
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     return response
+
+
+def cadastro(request):
+    if request.user.is_authenticated:
+        return redirect('/')
+
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Faz o login automático após criar a conta
+            login(request, user)
+            messages.success(request, f"Bem-vindo(a) ao AtletiQ, {user.username}!")
+            return redirect('/')
+    else:
+        form = UserCreationForm()
+    
+    return render(request, 'predictions/cadastro.html', {'form': form})

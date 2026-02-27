@@ -53,6 +53,26 @@
                     Simulação
                 </a>
             </nav>
+
+            <div class="flex items-center gap-4">
+                {% if user.is_authenticated %}
+                    <span class="text-white text-sm font-bold">Olá, <span class="text-[#00E676]">{{ user.username }}</span></span>
+                    
+                    <form method="POST" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors">
+                            Sair
+                        </button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="text-white hover:text-[#00E676] font-bold text-sm transition-colors">
+                        Entrar
+                    </a>
+                    <a href="{% url 'cadastro' %}" class="bg-[#00E676] text-black px-4 py-2 rounded-full font-black text-sm hover:bg-[#00c865] transition-colors shadow-lg">
+                        Criar Conta
+                    </a>
+                {% endif %}
+            </div>
             
         </div>
 
