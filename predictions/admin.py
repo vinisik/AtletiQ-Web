@@ -9,22 +9,23 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from .models import Liga, Time, Partida, Titulo, VotoPopular
 
+# Filtro Customizado
 class LigaDoTimeFilter(SimpleListFilter):
     title = 'Liga' 
     parameter_name = 'liga' 
 
     def lookups(self, request, model_admin):
         ligas = Liga.objects.all().order_by('nome')
-        return [(liga.pk, liga.nome) for liga in ligas]
+        return [(str(liga.pk), liga.nome) for liga in ligas]
 
     def queryset(self, request, queryset):
         if self.value():
             partidas = Partida.objects.filter(liga_id=self.value())
             
-            home_ids = partidas.values_list('home_team_id', flat=True)
-            away_ids = partidas.values_list('away_team_id', flat=True)
+            home_ids = list(partidas.values_list('home_team_id', flat=True))
+            away_ids = list(partidas.values_list('away_team_id', flat=True))
             
-            ids_na_liga = set(home_ids).union(set(away_ids))
+            ids_na_liga = set(home_ids + away_ids)
             
             return queryset.filter(id__in=ids_na_liga)
         return queryset
@@ -45,7 +46,6 @@ class LigaAdmin(admin.ModelAdmin):
 class TimeAdmin(admin.ModelAdmin):
     list_display = ('nome', 'escudo_preview')
     search_fields = ('nome',)
-
     list_filter = (LigaDoTimeFilter,)
 
     # Preview do escudo do time no Admin
@@ -58,10 +58,10 @@ class TimeAdmin(admin.ModelAdmin):
 @admin.register(Partida)
 class PartidaAdmin(admin.ModelAdmin):
     list_display = ('data', 'status_badge', 'home_team', 'placar', 'away_team', 'liga', 'temporada', 'rodada')
+    
+    # Filtros 
     list_filter = ('liga', 'temporada', 'data')
     search_fields = ('home_team__nome', 'away_team__nome')
-
-    list_filter = (LigaDoTimeFilter,)
     
     # Navegação por datas no topo
     date_hierarchy = 'data'
@@ -140,7 +140,6 @@ class TituloAdmin(admin.ModelAdmin):
     list_display = ('time', 'nome', 'ano')
     search_fields = ('time__nome', 'nome')
     list_filter = ('time',)
-    list_filter = (LigaDoTimeFilter,)
 
 @admin.register(VotoPopular)
 class VotoPopularAdmin(admin.ModelAdmin):
