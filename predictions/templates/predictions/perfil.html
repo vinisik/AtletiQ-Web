@@ -17,8 +17,7 @@
 
     <div class="mb-8 border-b border-[#333] pb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-            <h2 class="text-3xl font-black text-white uppercase tracking-tighter">Meu <span class="text-[#00E676]">Perfil</span></h2>
-            
+            <h2 class="text-3xl font-black text-white uppercase tracking-tighter"><span class="text-[#00E676]">{{ user.username }}</span> - Meu Perfil</h2>
             {% if times_favoritos %}
             <div class="flex items-center gap-2 mt-3 bg-[#121212] p-2 px-3 rounded-lg border border-[#333] w-max shadow-inner">
                 <span class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mr-2">Times Favoritos: </span>
