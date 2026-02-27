@@ -17,6 +17,7 @@ class Command(BaseCommand):
             'premier-league': {'code': 'PL', 'odds_code': 'soccer_epl', 'nome': 'Premier League', 'pais': 'Inglaterra'},
             'la-liga': {'code': 'PD', 'odds_code': 'soccer_spain_la_liga', 'nome': 'La Liga', 'pais': 'Espanha'},
             'serie-a': {'code': 'SA', 'odds_code': 'soccer_italy_serie_a', 'nome': 'Serie A', 'pais': 'Itália'},
+            'bundesliga': {'code': 'BL1', 'odds_code': 'soccer_germany_bundesliga', 'nome': 'Bundesliga', 'pais': 'Alemanha'},
         }
 
         ligas_mantidas = list(LIGAS_CONFIG.keys())
