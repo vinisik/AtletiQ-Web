@@ -18,6 +18,8 @@ class Command(BaseCommand):
             'la-liga': {'code': 'PD', 'odds_code': 'soccer_spain_la_liga', 'nome': 'La Liga', 'pais': 'Espanha'},
             'serie-a': {'code': 'SA', 'odds_code': 'soccer_italy_serie_a', 'nome': 'Serie A', 'pais': 'Itália'},
             'bundesliga': {'code': 'BL1', 'odds_code': 'soccer_germany_bundesliga', 'nome': 'Bundesliga', 'pais': 'Alemanha'},
+            'ligue-1': {'code': 'FL1', 'odds_code': 'soccer_france_ligue_one', 'nome': 'Ligue 1', 'pais': 'França'},
+            'eredivise': {'code': 'DED', 'odds_code': 'soccer_netherlands_eredivisie', 'nome': 'Eredivisie', 'pais': 'Holanda'},
         }
 
         ligas_mantidas = list(LIGAS_CONFIG.keys())
@@ -38,16 +40,34 @@ class Command(BaseCommand):
                         away_team, _ = Time.objects.get_or_create(nome=row['AwayTeam'])
                         fthg = None if pd.isna(row['FTHG']) else int(row['FTHG'])
                         ftag = None if pd.isna(row['FTAG']) else int(row['FTAG'])
+                        
+                        api_id = row.get('api_id')
 
-                        Partida.objects.update_or_create(
-                            liga=liga_obj, home_team=home_team, away_team=away_team,
-                            rodada=row['Rodada'], temporada=ano, 
-                            defaults={
-                                'api_id': row.get('api_id'),
-                                'data': parse_datetime(row['Date']) if isinstance(row['Date'], str) else row['Date'],
-                                'fthg': fthg, 'ftag': ftag,
-                            }
-                        )
+                        if api_id and not pd.isna(api_id):
+                            Partida.objects.update_or_create(
+                                api_id=api_id,
+                                defaults={
+                                    'liga': liga_obj,
+                                    'home_team': home_team,
+                                    'away_team': away_team,
+                                    'rodada': row['Rodada'],
+                                    'temporada': ano,
+                                    'data': parse_datetime(row['Date']) if isinstance(row['Date'], str) else row['Date'],
+                                    'fthg': fthg,
+                                    'ftag': ftag,
+                                }
+                            )
+                        else:
+                            Partida.objects.update_or_create(
+                                liga=liga_obj, home_team=home_team, away_team=away_team, temporada=ano,
+                                defaults={
+                                    'rodada': row['Rodada'],
+                                    'data': parse_datetime(row['Date']) if isinstance(row['Date'], str) else row['Date'],
+                                    'fthg': fthg,
+                                    'ftag': ftag,
+                                }
+                            )
+                            
                     self.stdout.write(self.style.SUCCESS(f"Jogos de {ano} salvos."))
                 time.sleep(7) 
 
