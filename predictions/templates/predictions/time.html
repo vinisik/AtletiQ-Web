@@ -19,7 +19,7 @@
     <div class="flex flex-col md:flex-row items-center gap-6 mb-6 bg-[#1E1E1E] p-8 rounded-md border border-[#333] relative overflow-hidden">
         <div class="absolute inset-0 bg-gradient-to-r from-[#00E676]/5 to-transparent"></div>
         
-        <img src="{{ escudo }}" class="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl relative z-10" onerror="this.src='https://via.placeholder.com/150?text=?️'">
+        <img src="{{ escudo }}" class="w-24 h-24 md:w-32 md:h-32 object-contain drop-shadow-2xl relative z-10" onerror="this.src='https://via.placeholder.com/150?text=🛡️'">
         
         <div class="text-center md:text-left relative z-10">
             <h2 class="text-white text-3xl md:text-5xl font-black tracking-tighter uppercase mb-2">
@@ -30,28 +30,6 @@
                 <span class="px-3 py-1 rounded bg-[#333] text-gray-300 font-bold text-xs uppercase tracking-widest">{{ liga_pais }}</span>
             </div>
         </div>
-    </div>
-
-    <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] mb-6 shadow-lg relative overflow-hidden">
-        <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-            <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-        </div>
-        
-        <h3 class="text-[#00E676] text-lg font-black uppercase tracking-widest mb-4 flex items-center gap-2 relative z-10">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-            Principais Títulos
-        </h3>
-        
-        <ul class="flex flex-wrap gap-3 relative z-10">
-            {% for titulo in titulos %}
-            <li class="flex items-center gap-3 text-sm text-gray-300 bg-[#252525] px-4 py-3 rounded-xl border border-[#333] hover:border-[#00E676] hover:text-white transition-all duration-300 group cursor-default shadow-md">
-                <span class="w-2 h-2 rounded-full bg-yellow-500 group-hover:scale-125 transition-transform"></span>
-                <span class="font-bold">{{ titulo.nome }}</span>
-            </li>
-            {% empty %}
-            <li class="text-gray-500 text-sm italic w-full text-center py-2">Nenhum título registrado no sistema.</li>
-            {% endfor %}
-        </ul>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -68,7 +46,7 @@
                     
                     <div class="flex bg-[#121212] p-1 rounded-3xl border border-[#333]">
                         <button onclick="mudarAba('finalizados')" id="btn-finalizados" class="px-3 py-1.5 rounded-2xl text-[10px] font-bold uppercase transition-all bg-[#333] text-[#00E676] shadow-md">
-                            Finalizados
+                            Últimos
                         </button>
                         <button onclick="mudarAba('proximos')" id="btn-proximos" class="px-3 py-1.5 rounded-2xl text-[10px] font-bold uppercase transition-all text-gray-500 hover:text-gray-300">
                             Próximos
@@ -76,54 +54,101 @@
                     </div>
                 </div>
 
-                <div id="lista-finalizados" class="space-y-4 animate-fadeIn flex-1">
+                <div id="lista-finalizados" class="space-y-3 animate-fadeIn flex-1 mt-4">
                     {% for item in historico %}
-                    <div class="jogo-item flex items-center justify-between text-sm border-b border-[#333] pb-3 last:border-0 last:pb-0 group hover:bg-[#252525] p-2 -mx-2 transition-colors {% if forloop.counter > 5 %}hidden{% endif %}">
-                        <div class="flex items-center gap-3">
-                            <span class="w-6 h-6 rounded flex items-center justify-center font-bold text-[10px] shadow-lg
-                                {% if item.resultado == 'V' %}bg-[#00E676] text-black
-                                {% elif item.resultado == 'E' %}bg-gray-600 text-white
-                                {% else %}bg-red-500 text-white shadow-red-500/20{% endif %}">
-                                {{ item.resultado }}
+                    <div class="jogo-item bg-[#121212] border border-[#333] rounded-md p-3 hover:border-[#00E676]/50 transition-colors shadow-sm relative overflow-hidden group">
+                        
+                        <div class="absolute left-0 top-0 bottom-0 w-1
+                            {% if item.resultado == 'V' %}bg-[#00E676]
+                            {% elif item.resultado == 'E' %}bg-gray-500
+                            {% else %}bg-red-500{% endif %}"></div>
+
+                        <div class="pl-2 flex justify-between items-center text-[9px] text-gray-500 font-mono mb-3 uppercase tracking-wider">
+                            <span>{{ item.campeonato }} • <strong class="text-gray-400">{{ item.jogo.data|date:"d/m" }}</strong></span>
+                            <span class="font-bold
+                                {% if item.resultado == 'V' %}text-[#00E676]
+                                {% elif item.resultado == 'E' %}text-gray-400
+                                {% else %}text-red-500{% endif %}">
+                                {% if item.resultado == 'V' %}Vitória
+                                {% elif item.resultado == 'E' %}Empate
+                                {% else %}Derrota{% endif %}
                             </span>
-                            <div class="flex flex-col">
-                                <span class="text-gray-300 font-bold text-xs group-hover:text-white transition-colors">{{ item.adversario.nome }}</span>
-                                <span class="text-[9px] text-gray-600 font-mono">
-                                    {{ item.campeonato }} • {{ item.mando }}
-                                </span>
-                            </div>
                         </div>
-                        <span class="font-mono text-white font-bold bg-[#121212] px-2 py-1 rounded border border-[#333] text-xs shadow-inner">
-                            {{ item.placar }}
-                        </span>
+
+                        <div class="pl-2 flex items-center justify-between gap-2">
+                            {% if item.mando == 'C' %}
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ escudo }}" class="w-7 h-7 object-contain drop-shadow-md" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ time.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-white font-bold truncate w-full text-center">{{ time.nome }}</span>
+                                </div>
+                                <div class="w-[30%] flex justify-center">
+                                    <span class="font-black text-white bg-[#222] px-2 py-1 rounded text-xs border border-[#444] shadow-inner tracking-widest">{{ item.placar }}</span>
+                                </div>
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ ESCUDOS|dict_get:item.adversario.nome }}" class="w-7 h-7 object-contain drop-shadow-md opacity-70 group-hover:opacity-100 transition-opacity" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ item.adversario.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-gray-400 font-bold truncate w-full text-center">{{ item.adversario.nome }}</span>
+                                </div>
+                            {% else %}
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ ESCUDOS|dict_get:item.adversario.nome }}" class="w-7 h-7 object-contain drop-shadow-md opacity-70 group-hover:opacity-100 transition-opacity" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ item.adversario.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-gray-400 font-bold truncate w-full text-center">{{ item.adversario.nome }}</span>
+                                </div>
+                                <div class="w-[30%] flex justify-center">
+                                    <span class="font-black text-white bg-[#222] px-2 py-1 rounded text-xs border border-[#444] shadow-inner tracking-widest">{{ item.placar }}</span>
+                                </div>
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ escudo }}" class="w-7 h-7 object-contain drop-shadow-md" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ time.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-white font-bold truncate w-full text-center">{{ time.nome }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                     {% empty %}
                     <p class="text-gray-600 text-xs italic text-center py-4">Nenhum jogo recente.</p>
                     {% endfor %}
-                    
-                    {% if historico|length > 5 %}
-                    <button id="btn-carregar-mais" onclick="carregarMaisJogos()" class="w-full mt-4 py-2 border border-[#333] rounded-md text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-[#00E676] hover:border-[#00E676] transition-colors bg-[#121212]">
-                        Carregar Mais
-                    </button>
-                    {% endif %}
                 </div>
 
-                <div id="lista-proximos" class="space-y-3 hidden animate-fadeIn flex-1">
+                <div id="lista-proximos" class="space-y-3 hidden animate-fadeIn flex-1 mt-4">
                     {% for p in proximos %}
-                    <div class="flex items-center justify-between text-sm bg-[#252525] p-3 rounded-md border border-[#333] hover:border-[#00E676] transition-colors group">
-                        <div class="flex flex-col">
-                            <span class="text-[10px] text-gray-500 font-mono mb-1">{{ p.data|date:"d/m • H:i" }}</span>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold text-gray-400 w-4">{{ p.mando }}</span>
-                                <span class="text-white font-bold group-hover:text-[#00E676] transition-colors truncate max-w-[120px]">{{ p.adversario.nome }}</span>
-                            </div>
+                    <div class="bg-[#121212] border border-[#333] rounded-md p-3 hover:border-[#00E676]/50 transition-colors shadow-sm relative overflow-hidden group">
+                        
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#333] group-hover:bg-[#00E676] transition-colors"></div>
+
+                        <div class="pl-2 flex justify-between items-center text-[9px] text-gray-500 font-mono mb-3 uppercase tracking-wider">
+                            <span>{{ p.campeonato }} • R{{ p.rodada }}</span>
+                            <span class="text-[#00E676] font-bold">{{ p.data|date:"d/m H:i" }}</span>
                         </div>
-                        <span class="text-[9px] bg-[#333] px-2 py-1 rounded text-gray-400 font-mono border border-[#444] text-center">
-                            {{ p.campeonato }}<br>R{{ p.rodada }}
-                        </span>
+
+                        <div class="pl-2 flex items-center justify-between gap-2">
+                            {% if p.mando == 'C' %}
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ escudo }}" class="w-7 h-7 object-contain drop-shadow-md" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ time.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-white font-bold truncate w-full text-center">{{ time.nome }}</span>
+                                </div>
+                                <div class="w-[30%] flex justify-center">
+                                    <span class="font-black text-gray-600 text-[10px]">VS</span>
+                                </div>
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ ESCUDOS|dict_get:p.adversario.nome }}" class="w-7 h-7 object-contain drop-shadow-md opacity-70 group-hover:opacity-100 transition-opacity" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ p.adversario.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-gray-400 font-bold truncate w-full text-center">{{ p.adversario.nome }}</span>
+                                </div>
+                            {% else %}
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ ESCUDOS|dict_get:p.adversario.nome }}" class="w-7 h-7 object-contain drop-shadow-md opacity-70 group-hover:opacity-100 transition-opacity" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ p.adversario.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-gray-400 font-bold truncate w-full text-center">{{ p.adversario.nome }}</span>
+                                </div>
+                                <div class="w-[30%] flex justify-center">
+                                    <span class="font-black text-gray-600 text-[10px]">VS</span>
+                                </div>
+                                <div class="flex flex-col items-center w-[35%] gap-1.5">
+                                    <img src="{{ escudo }}" class="w-7 h-7 object-contain drop-shadow-md" onerror="this.src='https://via.placeholder.com/28/222/00E676?text={{ time.nome|slice:":1" }}'">
+                                    <span class="text-[10px] text-white font-bold truncate w-full text-center">{{ time.nome }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                     {% empty %}
-                    <div class="text-center py-6 border-2 border-dashed border-[#333] rounded-xl mt-4">
+                    <div class="text-center py-6 border-2 border-dashed border-[#333] rounded-xl mt-4 bg-[#121212]/50">
                         <p class="text-gray-600 text-xs italic">Sem jogos agendados.</p>
                     </div>
                     {% endfor %}
@@ -132,8 +157,9 @@
             </div>
         </div>
 
-        <div class="md:col-span-8">
-            <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] h-[500px] relative shadow-lg">
+        <div class="md:col-span-8 flex flex-col gap-6">
+            
+            <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] h-[350px] relative shadow-lg">
                 <h3 class="text-white text-lg font-black uppercase tracking-widest mb-6 flex items-center gap-2">
                     <svg class="w-5 h-5 text-[#00E676]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                     Evolução no Campeonato
@@ -142,26 +168,60 @@
                     <canvas id="chartEvolucao"></canvas>
                 </div>
             </div>
+
+            {% if mini_tabela %}
+            <div class="bg-[#1E1E1E] p-6 rounded-md border border-[#333] shadow-lg animate-fadeIn">
+                <h3 class="text-white text-xs font-black uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-[#00E676]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                    Classificação - <span class="text-gray-400">{{ liga_nome }}</span>
+                </h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr class="text-[10px] text-gray-500 uppercase tracking-widest border-b border-[#333]">
+                                <th class="pb-2 font-black w-8 text-center">#</th>
+                                <th class="pb-2 font-black pl-2">Clube</th>
+                                <th class="pb-2 font-black text-center w-8">P</th>
+                                <th class="pb-2 font-black text-center w-8 hidden sm:table-cell">J</th>
+                                <th class="pb-2 font-black text-center w-8 hidden sm:table-cell">V</th>
+                                <th class="pb-2 font-black text-center w-8 hidden sm:table-cell">E</th>
+                                <th class="pb-2 font-black text-center w-8 hidden sm:table-cell">D</th>
+                                <th class="pb-2 font-black text-center w-8">SG</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in mini_tabela %}
+                            <tr class="border-b border-[#333]/50 last:border-0 transition-colors {% if row.time.id == time.id %}bg-[#00E676]/10 border-l-2 border-l-[#00E676]{% else %}hover:bg-[#252525] border-l-2 border-l-transparent{% endif %}">
+                                <td class="py-3 text-center text-xs font-bold {% if row.time.id == time.id %}text-[#00E676]{% else %}text-gray-400{% endif %}">{{ row.pos }}º</td>
+                                <td class="py-3 pl-2">
+                                    <div class="flex items-center gap-2">
+                                        <img src="{{ ESCUDOS|dict_get:row.time.nome }}" class="w-5 h-5 object-contain" onerror="this.src='https://via.placeholder.com/20/222/00E676?text={{ row.time.nome|slice:":1" }}'">
+                                        <span class="text-xs font-bold {% if row.time.id == time.id %}text-white{% else %}text-gray-300{% endif %}">{{ row.time.nome }}</span>
+                                    </div>
+                                </td>
+                                <td class="py-3 text-center text-xs font-black text-white">{{ row.p }}</td>
+                                <td class="py-3 text-center text-[11px] text-gray-400 hidden sm:table-cell">{{ row.j }}</td>
+                                <td class="py-3 text-center text-[11px] text-gray-400 hidden sm:table-cell">{{ row.v }}</td>
+                                <td class="py-3 text-center text-[11px] text-gray-400 hidden sm:table-cell">{{ row.e }}</td>
+                                <td class="py-3 text-center text-[11px] text-gray-400 hidden sm:table-cell">{{ row.d }}</td>
+                                <td class="py-3 text-center text-[11px] font-bold {% if row.sg > 0 %}text-[#00E676]{% elif row.sg < 0 %}text-red-500{% else %}text-gray-500{% endif %}">
+                                    {% if row.sg > 0 %}+{% endif %}{{ row.sg }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Botão carregar mais
-    function carregarMaisJogos() {
-        const jogosOcultos = document.querySelectorAll('.jogo-item.hidden');
-        const itemsParaMostrar = 5; // Mostra de 5 em 5
-        
-        for(let i = 0; i < itemsParaMostrar && i < jogosOcultos.length; i++) {
-            jogosOcultos[i].classList.remove('hidden');
-        }
-        
-        if(document.querySelectorAll('.jogo-item.hidden').length === 0) {
-            document.getElementById('btn-carregar-mais').style.display = 'none';
-        }
-    }
-
     function mudarAba(aba) {
         const listaFinalizados = document.getElementById('lista-finalizados');
         const listaProximos = document.getElementById('lista-proximos');

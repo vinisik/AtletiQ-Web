@@ -242,7 +242,8 @@ def detalhes_confronto(request, partida_id):
         h2h = Partida.objects.filter(
             (Q(home_team=partida.home_team) & Q(away_team=partida.away_team)) |
             (Q(home_team=partida.away_team) & Q(away_team=partida.home_team)),
-            fthg__isnull=False
+            fthg__isnull=False,
+            liga__isnull=False 
         ).exclude(pk=partida.pk).order_by('-data')[:5]
         
         h2h_lista = [{'Data': p.data.isoformat() if p.data else None, 'Mandante': p.home_team.nome, 'Visitante': p.away_team.nome, 'GM': p.fthg, 'GV': p.ftag} for p in h2h]
@@ -256,15 +257,10 @@ def detalhes_confronto(request, partida_id):
             home_goals = int(partida.fthg or 0)
             away_goals = int(partida.ftag or 0)
             
-            # Gerando os gols reais do time da Casa na timeline
             for _ in range(home_goals):
                 eventos.append({'minuto': random.randint(2, 90), 'tipo': 'GOAL', 'jogador': 'Atacante', 'is_home': True})
-            
-            # Gerando os gols reais do time Visitante na timeline
             for _ in range(away_goals):
                 eventos.append({'minuto': random.randint(2, 90), 'tipo': 'GOAL', 'jogador': 'Atacante', 'is_home': False})
-                
-            # Gerando alguns cartões para compor o visual
             for _ in range(random.randint(2, 5)):
                 is_home = random.choice([True, False])
                 eventos.append({'minuto': random.randint(10, 85), 'tipo': 'YELLOW_CARD', 'jogador': 'Defensor', 'is_home': is_home})
@@ -287,7 +283,7 @@ def detalhes_confronto(request, partida_id):
                 print(f"IA indisponível: {e}")
 
         def get_form(time_obj):
-            qs = Partida.objects.filter((Q(home_team=time_obj)|Q(away_team=time_obj)), fthg__isnull=False).order_by('-data')[:5]
+            qs = Partida.objects.filter((Q(home_team=time_obj)|Q(away_team=time_obj)), fthg__isnull=False, liga__isnull=False).order_by('-data')[:5]
             return [
                 'V' if (j.home_team == time_obj and (j.fthg or 0) > (j.ftag or 0)) or (j.away_team == time_obj and (j.ftag or 0) > (j.fthg or 0)) 
                 else 'E' if j.fthg == j.ftag else 'D' 
@@ -318,10 +314,12 @@ def detalhes_time(request, time_id):
     liga_nome = ultima_partida.liga.nome if ultima_partida and ultima_partida.liga else 'Competição'
     liga_pais = ultima_partida.liga.pais if ultima_partida and ultima_partida.liga else 'Local'
 
+    # Filtro para ignorar partidas fantasmas 
     jogos = Partida.objects.filter(
         (Q(home_team=time_obj) | Q(away_team=time_obj)),
-        fthg__isnull=False, ftag__isnull=False
-    ).order_by('-data')[:30] 
+        fthg__isnull=False, ftag__isnull=False,
+        liga__isnull=False 
+    ).order_by('-data')[:5] 
     
     historico = []
     for j in jogos:
@@ -341,9 +339,11 @@ def detalhes_time(request, time_id):
             'campeonato': j.liga.nome if j.liga else ''
         })
 
+    # Filtro para próximos jogos
     jogos_futuros = Partida.objects.filter(
         (Q(home_team=time_obj) | Q(away_team=time_obj)),
-        fthg__isnull=True
+        fthg__isnull=True,
+        liga__isnull=False
     ).order_by('data')[:5]
 
     proximos = []
@@ -356,6 +356,8 @@ def detalhes_time(request, time_id):
         })
 
     ev_labels, ev_data = [], []
+    mini_tabela = []
+
     if ultima_partida and ultima_partida.liga:
         all_games = Partida.objects.filter(
             liga=ultima_partida.liga, 
@@ -382,6 +384,49 @@ def detalhes_time(request, time_id):
                 if pos:
                     ev_labels.append(f"R{r}")
                     ev_data.append(pos)
+            
+            tabela_completa = []
+            times_ids = list(set(df['home_team_id']).union(set(df['away_team_id'])))
+            for t in times_ids:
+                t_games = df[(df['home_team_id'] == t) | (df['away_team_id'] == t)]
+                v = 0; e = 0; d = 0; gm = 0; gs = 0
+                for _, row in t_games.iterrows():
+                    if row['home_team_id'] == t:
+                        gm += row['fthg']; gs += row['ftag']
+                        if row['fthg'] > row['ftag']: v += 1
+                        elif row['fthg'] == row['ftag']: e += 1
+                        else: d += 1
+                    else:
+                        gm += row['ftag']; gs += row['fthg']
+                        if row['ftag'] > row['fthg']: v += 1
+                        elif row['ftag'] == row['fthg']: e += 1
+                        else: d += 1
+                pts = (v * 3) + e
+                tabela_completa.append({
+                    'time_id': t, 'p': pts, 'j': len(t_games), 
+                    'v': v, 'e': e, 'd': d, 'sg': gm - gs, 'gm': gm
+                })
+            
+            tabela_completa = sorted(tabela_completa, key=lambda x: (-x['p'], -x['v'], -x['sg'], -x['gm']))
+            
+            posicao_atual = None
+            for idx, row in enumerate(tabela_completa):
+                row['pos'] = idx + 1
+                if row['time_id'] == time_obj.pk:
+                    posicao_atual = idx
+
+            if tabela_completa and posicao_atual is not None:
+                start_idx = max(0, posicao_atual - 1)
+                end_idx = min(len(tabela_completa), start_idx + 3)
+                if end_idx - start_idx < 3 and len(tabela_completa) >= 3:
+                    start_idx = len(tabela_completa) - 3
+                
+                mini_tabela_raw = tabela_completa[start_idx:end_idx]
+                
+                times_dict = {t.pk: t for t in Time.objects.filter(id__in=[r['time_id'] for r in mini_tabela_raw])}
+                for r in mini_tabela_raw:
+                    r['time'] = times_dict[r['time_id']]
+                    mini_tabela.append(r)
 
     try: titulos_reais = Titulo.objects.filter(time=time_obj)
     except: titulos_reais = []
@@ -390,6 +435,7 @@ def detalhes_time(request, time_id):
         'time': time_obj, 'escudo': escudos.get(time_obj.nome, ''), 
         'historico': historico, 'proximos': proximos,
         'evolucao_labels': json.dumps(ev_labels), 'evolucao_data': json.dumps(ev_data),
+        'mini_tabela': mini_tabela,
         'titulos': titulos_reais, 'liga_nome': liga_nome, 'liga_pais': liga_pais
     })
 
